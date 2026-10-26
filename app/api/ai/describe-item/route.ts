@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { DEMO_PRESET_IMAGES } from '@/lib/data';
 import { AiExtractionResult } from '@/lib/types';
 
-export const runtime = 'nodejs';
-
 export async function POST(req: Request) {
   try {
     const { imageBase64, imageUrl } = await req.json();
