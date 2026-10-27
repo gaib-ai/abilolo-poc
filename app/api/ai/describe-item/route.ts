@@ -69,7 +69,26 @@ export async function POST(req: Request) {
       }
     }
 
-    // 1. Try Gemini API if key is present
+    // 1. Try Token Kiosk API (Primary)
+    const tokenKioskKey = process.env.TOKEN_KIOSK_API_KEY;
+    if (tokenKioskKey) {
+      try {
+        const kioskResult = await callOpenAiVision({
+          apiKey: tokenKioskKey,
+          baseUrl: process.env.TOKEN_KIOSK_BASE_URL || 'https://api-token-kiosk.gaib.ai/v1',
+          model: process.env.TOKEN_KIOSK_MODEL || 'gemini/gemini-2.5-flash',
+          imageSource: imageBase64 || imageUrl,
+          isEn
+        });
+        if (kioskResult) {
+          return NextResponse.json(kioskResult);
+        }
+      } catch (err) {
+        console.warn('Token Kiosk vision error, checking fallback keys:', err);
+      }
+    }
+
+    // 2. Try Gemini API if key is present
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
       try {
@@ -82,11 +101,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Try OpenAI API if key is present
+    // 3. Try OpenAI API if key is present
     const openAiKey = process.env.OPENAI_API_KEY;
     if (openAiKey) {
       try {
-        const openAiResult = await callOpenAiVision(openAiKey, imageBase64 || imageUrl);
+        const openAiResult = await callOpenAiVision({
+          apiKey: openAiKey,
+          imageSource: imageBase64 || imageUrl,
+          isEn
+        });
         if (openAiResult) {
           return NextResponse.json(openAiResult);
         }
@@ -170,43 +193,76 @@ async function callGeminiVision(apiKey: string, imageSource: string): Promise<Ai
   const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawText) return null;
 
-  return JSON.parse(rawText) as AiExtractionResult;
+  return parseJsonCleanly(rawText);
 }
 
-async function callOpenAiVision(apiKey: string, imageSource: string): Promise<AiExtractionResult | null> {
+function parseJsonCleanly(text: string): AiExtractionResult {
+  const cleaned = text
+    .replace(/^```json/gim, '')
+    .replace(/^```/gim, '')
+    .trim();
+  return JSON.parse(cleaned) as AiExtractionResult;
+}
+
+async function callOpenAiVision({
+  apiKey,
+  baseUrl = 'https://api.openai.com/v1',
+  model = 'gpt-4o-mini',
+  imageSource,
+  isEn
+}: {
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+  imageSource: string;
+  isEn: boolean;
+}): Promise<AiExtractionResult | null> {
   const imageUrl = imageSource.startsWith('data:') || imageSource.startsWith('http')
     ? imageSource
     : `data:image/jpeg;base64,${imageSource}`;
 
-  const prompt = `あなたは日本の中古ベビー・キッズ用品お譲りプラットフォーム「Abilolo」のAI出品アシスタントです。
-画像に写っているベビー用品を詳細に分析し、以下のJSON形式のみで回答してください。Markdownのコードブロックも含めず、純粋なJSON文字列のみを出力してください。
-
+  const prompt = isEn
+    ? `You are an AI assistant for "Abilolo", a Japan baby goods gifting platform.
+Analyze the baby goods in the image and return ONLY a valid JSON object (no markdown, no backticks):
+{
+  "title": "Natural product title with brand and model",
+  "category": "One of: Strollers & Car Seats / Baby Carriers & Slings / Baby & Kids Clothing / Feeding & Nursing / Bath, Diapers & Hygiene / Bedding & Nursery Furniture / Toys & Educational",
+  "subCategory": "Specific subcategory",
+  "condition": "One of: 新品・未使用 / 未使用に近い / 目立った傷や汚れなし / やや傷や汚れあり",
+  "targetAge": "Estimated age or size",
+  "description": "Polite, helpful description (2-3 sentences)",
+  "estimatedShippingMethod": "Estimated box size (e.g. COD (Yamato Transport 100 Size))",
+  "tags": ["tag1", "tag2"]
+}`
+    : `あなたは日本の中古ベビー・キッズ用品お譲りプラットフォーム「Abilolo」のAI出品アシスタントです。
+画像に写っているベビー用品を詳細に分析し、以下のJSON形式のみで回答してください。Markdownのコードブロック(例: \`\`\`json)も含めず、純粋なJSON文字列のみを出力してください。
 {
   "title": "ブランド名・商品名・モデルを含めた自然な日本語タイトル",
-  "category": "ベビーカー・チャイルドシート / 抱っこ紐・スリング / ベビー服・キッズ服 / 授乳・お食事用品 / おむつ・お風呂・衛生 / 寝具・室内用品 / おもちゃ・知育玩具 のいずれか",
-  "subCategory": "詳細サブカテゴリ",
-  "condition": "新品・未使用 / 未使用に近い / 目立った傷や汚れなし / やや傷や汚れあり のいずれか",
-  "targetAge": "推定される対象年齢・月齢・サイズ",
+  "category": "以下のいずれか1つ: ベビーカー・チャイルドシート / 抱っこ紐・スリング / ベビー服・キッズ服 / 授乳・お食事用品 / おむつ・お風呂・衛生 / 寝具・室内用品 / おもちゃ・知育玩具",
+  "subCategory": "該当する詳細サブカテゴリ",
+  "condition": "以下のいずれか厳格に一致: 新品・未使用 / 未使用に近い / 目立った傷や汚れなし / やや傷や汚れあり",
+  "targetAge": "推定される対象年齢・月齢・サイズ (例: 生後1ヶ月〜3歳頃、70〜80cm)",
   "description": "丁寧な出品紹介文(2〜3文)",
   "estimatedShippingMethod": "梱包サイズの想定 (例: 着払い (ヤマト宅急便 100サイズ想定))",
-  "tags": ["タグ1", "タグ2"]
+  "tags": ["関連タグ1", "タグ2"]
 }`;
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const endpoint = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
+
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
+      model,
       messages: [
         {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } }
+            { type: 'image_url', image_url: { url: imageUrl } }
           ]
         }
       ]
@@ -215,12 +271,12 @@ async function callOpenAiVision(apiKey: string, imageSource: string): Promise<Ai
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${text}`);
+    throw new Error(`Vision API error from ${endpoint} (${res.status}): ${text}`);
   }
 
   const data = await res.json();
   const rawText = data.choices?.[0]?.message?.content;
   if (!rawText) return null;
 
-  return JSON.parse(rawText) as AiExtractionResult;
+  return parseJsonCleanly(rawText);
 }
