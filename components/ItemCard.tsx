@@ -2,15 +2,18 @@
 
 import React from 'react';
 import { Item } from '@/lib/types';
-import { MapPin, Clock, Tag, Eye } from 'lucide-react';
+import { MapPin, Eye } from 'lucide-react';
+import { Locale, DICTIONARY } from '@/lib/i18n';
 
 interface ItemCardProps {
   item: Item;
+  locale: Locale;
   onSelect: (item: Item) => void;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, onSelect }) => {
+export const ItemCard: React.FC<ItemCardProps> = ({ item, locale, onSelect }) => {
   const isClaimed = item.status === 'claimed';
+  const t = DICTIONARY[locale];
 
   // Condition color badges
   const conditionColorMap: Record<string, string> = {
@@ -19,6 +22,15 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onSelect }) => {
     '目立った傷や汚れなし': 'bg-amber-50 text-amber-800 border-amber-200',
     'やや傷や汚れあり': 'bg-gray-100 text-gray-700 border-gray-200'
   };
+
+  const conditionDisplay = locale === 'en'
+    ? {
+        '新品・未使用': 'Brand New',
+        '未使用に近い': 'Like New',
+        '目立った傷や汚れなし': 'Gently Used',
+        'やや傷や汚れあり': 'Fair Condition'
+      }[item.condition] || item.condition
+    : item.condition;
 
   return (
     <div
@@ -40,13 +52,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onSelect }) => {
         {isClaimed ? (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
             <span className="bg-gray-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-full tracking-wider border border-white/20">
-              マッチング成立済
+              {t.cardClaimed}
             </span>
           </div>
         ) : (
           <div className="absolute top-2.5 left-2.5">
             <span className="bg-pink-600/90 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs">
-              ¥0 お譲り
+              {t.cardZeroYen}
             </span>
           </div>
         )}
@@ -67,7 +79,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onSelect }) => {
                 conditionColorMap[item.condition] || 'bg-gray-100 text-gray-700'
               }`}
             >
-              {item.condition}
+              {conditionDisplay}
             </span>
             <span className="text-[10px] text-gray-400 font-medium truncate">
               {item.category}
@@ -82,18 +94,18 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onSelect }) => {
         {/* Target Age & Shipping */}
         <div className="space-y-1 text-[11px] text-gray-500 pt-1 border-t border-gray-50">
           <div className="flex items-center justify-between">
-            <span className="text-gray-400 font-medium">対象目安:</span>
+            <span className="text-gray-400 font-medium">{t.targetAgeLabel}</span>
             <span className="font-semibold text-gray-700 truncate max-w-[150px]">{item.targetAge}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-400 font-medium">送料目安:</span>
-            <span className="text-pink-700 font-bold">{item.estimatedShippingFee || '着払い'}</span>
+            <span className="text-gray-400 font-medium">{t.shippingFeeLabel}</span>
+            <span className="text-pink-700 font-bold">{item.estimatedShippingFee || 'COD'}</span>
           </div>
         </div>
 
         {/* Footer Meta */}
         <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
-          <span className="truncate max-w-[120px]">出品: {item.giverName}</span>
+          <span className="truncate max-w-[120px]">{t.giverLabel} {item.giverName}</span>
           <div className="flex items-center gap-1">
             <Eye className="w-3 h-3" />
             <span>{item.views}</span>

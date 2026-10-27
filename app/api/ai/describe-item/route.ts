@@ -4,18 +4,67 @@ import { AiExtractionResult } from '@/lib/types';
 
 export async function POST(req: Request) {
   try {
-    const { imageBase64, imageUrl } = await req.json();
+    const { imageBase64, imageUrl, locale = 'ja' } = await req.json();
 
     if (!imageBase64 && !imageUrl) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
     }
 
+    const isEn = locale === 'en';
+
     // Check if matching preset URL exists
     if (imageUrl) {
-      const matched = DEMO_PRESET_IMAGES.find((p) => p.url === imageUrl);
-      if (matched) {
-        // Simulate real AI latency (1.2s) for realistic UX feel
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+      const presetIndex = DEMO_PRESET_IMAGES.findIndex((p) => p.url === imageUrl);
+      if (presetIndex !== -1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const matched = DEMO_PRESET_IMAGES[presetIndex];
+        
+        if (isEn) {
+          const englishPresets: AiExtractionResult[] = [
+            {
+              title: 'Combi Sugocal 4-Cas EggShock Compact Stroller',
+              category: 'Strollers & Car Seats',
+              subCategory: 'Strollers (Type A/B)',
+              condition: '目立った傷や汚れなし',
+              targetAge: '1 to 36 months (up to 15kg)',
+              description: 'Lightweight Japanese Combi stroller with EggShock safety cushion. Wheels roll smoothly and fabric canopy is in very good condition with no tears. Indoor stored.',
+              estimatedShippingMethod: 'COD (Yamato Transport 160 Size)',
+              tags: ['Combi', 'Stroller', 'Lightweight', 'EggShock']
+            },
+            {
+              title: 'Ergobaby OMNI 360 Cool Air Mesh Carrier',
+              category: 'Baby Carriers & Slings',
+              subCategory: 'Ergonomic Carriers',
+              condition: '未使用に近い',
+              targetAge: 'Newborn (3.2kg) to 48 months (20kg)',
+              description: 'Breathable 3D mesh carrier in excellent condition. Buckles and straps are tight and secure. Freshly laundered with infant-safe detergent.',
+              estimatedShippingMethod: 'COD (Yamato Transport 80 Size)',
+              tags: ['Ergobaby', 'Carrier', 'Omni360', 'Mesh']
+            },
+            {
+              title: 'Natural Wood Montessori Activity Maze & Shape Sorter',
+              category: 'Toys & Educational',
+              subCategory: 'Wooden & Montessori',
+              condition: '目立った傷や汚れなし',
+              targetAge: '10 months to 3 years old',
+              description: 'Multi-functional wooden activity toy with bead coaster and shape puzzle. Smooth rounded corners with non-toxic finish. Sanitized and wiped down.',
+              estimatedShippingMethod: 'COD (Yu-Pack 100 Size)',
+              tags: ['Montessori', 'Wooden Toy', 'Puzzle', 'Toddler']
+            },
+            {
+              title: 'Organic Cotton Long-Sleeve Romper Set 70cm (3 pcs)',
+              category: 'Baby & Kids Clothing',
+              subCategory: 'Newborn (50-70cm)',
+              condition: '未使用に近い',
+              targetAge: '3 to 9 months (60-70cm)',
+              description: 'Soft 100% organic cotton coveralls with easy front snap buttons. Minimal wear, clean with no stains or fabric pilling.',
+              estimatedShippingMethod: 'COD (Compact Box / Nekopos)',
+              tags: ['Baby Clothing', 'Rompers', 'Organic Cotton', '70cm']
+            }
+          ];
+          return NextResponse.json(englishPresets[presetIndex] || matched.mockResult);
+        }
+
         return NextResponse.json(matched.mockResult);
       }
     }

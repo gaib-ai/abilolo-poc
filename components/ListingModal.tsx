@@ -3,33 +3,44 @@
 import React, { useState, useRef } from 'react';
 import { Item, ItemCondition, AiExtractionResult } from '@/lib/types';
 import { CATEGORIES, PREFECTURES, DEMO_PRESET_IMAGES } from '@/lib/data';
-import { X, Camera, Upload, Sparkles, Check, Loader2, ArrowRight } from 'lucide-react';
+import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES } from '@/lib/i18n';
+import { X, Camera, Upload, Sparkles, Loader2 } from 'lucide-react';
 
 interface ListingModalProps {
   isOpen: boolean;
+  locale: Locale;
   onClose: () => void;
   onAddListing: (newItem: Item) => void;
 }
 
 export const ListingModal: React.FC<ListingModalProps> = ({
   isOpen,
+  locale,
   onClose,
   onAddListing
 }) => {
+  const t = DICTIONARY[locale];
+  const categoryList = locale === 'en' ? ENGLISH_CATEGORIES : CATEGORIES;
+  const prefectureList = locale === 'en' ? ENGLISH_PREFECTURES : PREFECTURES;
+
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [aiSuccess, setAiSuccess] = useState<boolean>(false);
 
   // Form State
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0].name);
+  const [category, setCategory] = useState(categoryList[0].name);
   const [condition, setCondition] = useState<ItemCondition>('目立った傷や汚れなし');
   const [targetAge, setTargetAge] = useState('');
   const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('東京都');
-  const [shippingMethod, setShippingMethod] = useState('着払い (ヤマト宅急便 100サイズ想定)');
-  const [estimatedShippingFee, setEstimatedShippingFee] = useState('約 1,200円〜1,500円');
-  const [giverName, setGiverName] = useState('ママユーザー');
+  const [location, setLocation] = useState(locale === 'en' ? 'Tokyo' : '東京都');
+  const [shippingMethod, setShippingMethod] = useState(
+    locale === 'en' ? 'COD (Yamato Transport 100 Size)' : '着払い (ヤマト宅急便 100サイズ想定)'
+  );
+  const [estimatedShippingFee, setEstimatedShippingFee] = useState(
+    locale === 'en' ? 'Approx. ¥1,200 ~ ¥1,500' : '約 1,200円〜1,500円'
+  );
+  const [giverName, setGiverName] = useState(locale === 'en' ? 'Parent User' : 'ママユーザー');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +63,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             imageUrl: imgUrlOrBase64.startsWith('http') ? imgUrlOrBase64 : undefined,
-            imageBase64: imgUrlOrBase64.startsWith('data:') ? imgUrlOrBase64 : undefined
+            imageBase64: imgUrlOrBase64.startsWith('data:') ? imgUrlOrBase64 : undefined,
+            locale
           })
         });
 
@@ -62,9 +74,12 @@ export const ListingModal: React.FC<ListingModalProps> = ({
       }
     } catch (err) {
       console.error(err);
-      // Fallback sensible defaults
-      setTitle('ベビー用品 (AI解析)');
-      setDescription('使用に伴う軽微な小傷はありますが、問題なくご使用いただけます。');
+      setTitle(locale === 'en' ? 'Baby Gear (AI Extracted)' : 'ベビー用品 (AI解析)');
+      setDescription(
+        locale === 'en'
+          ? 'Minor scuffs from regular use, but in great working condition.'
+          : '使用に伴う軽微な小傷はありますが、問題なくご使用いただけます。'
+      );
     } finally {
       setIsAnalyzing(false);
       setAiSuccess(true);
@@ -79,7 +94,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
     if (data.description) setDescription(data.description);
     if (data.estimatedShippingMethod) {
       setShippingMethod(data.estimatedShippingMethod);
-      setEstimatedShippingFee('約 1,000円〜1,600円 (着払い)');
+      setEstimatedShippingFee(locale === 'en' ? 'Approx. ¥1,000 ~ ¥1,600 (COD)' : '約 1,000円〜1,600円 (着払い)');
     }
   };
 
@@ -104,13 +119,13 @@ export const ListingModal: React.FC<ListingModalProps> = ({
       title,
       category,
       condition,
-      targetAge: targetAge || '0〜3歳頃',
+      targetAge: targetAge || (locale === 'en' ? '0 to 3 years' : '0〜3歳頃'),
       description,
       images: [selectedImage],
       location,
       shippingMethod,
       estimatedShippingFee,
-      giverName: giverName || '出品者',
+      giverName: giverName || (locale === 'en' ? 'Giver' : '出品者'),
       createdAt: new Date().toISOString().split('T')[0],
       status: 'available',
       views: 1,
@@ -132,8 +147,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
               <Camera className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-gray-900">写真でAIかんたん出品</h3>
-              <p className="text-[11px] text-gray-500">写真を撮るだけで商品情報をAIが自動生成します</p>
+              <h3 className="text-base font-extrabold text-gray-900">{t.listingModalTitle}</h3>
+              <p className="text-[11px] text-gray-500">{t.listingModalDesc}</p>
             </div>
           </div>
           <button
@@ -150,7 +165,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
           {/* Image Upload Area */}
           <div className="space-y-3">
             <label className="block text-xs font-bold text-gray-700">
-              出品するベビー用品の写真 <span className="text-pink-600">*</span>
+              {locale === 'en' ? 'Baby Goods Photo ' : '出品するベビー用品の写真 '}
+              <span className="text-pink-600">*</span>
             </label>
 
             {selectedImage ? (
@@ -165,7 +181,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                     onClick={() => fileInputRef.current?.click()}
                     className="px-4 py-2 bg-white text-gray-800 text-xs font-bold rounded-full shadow-md hover:bg-gray-50"
                   >
-                    写真を変更する
+                    {t.changePhoto}
                   </button>
                 </div>
 
@@ -173,8 +189,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                   <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-white space-y-3">
                     <Loader2 className="w-8 h-8 animate-spin text-pink-400" />
                     <div className="text-center space-y-1">
-                      <p className="text-xs font-bold tracking-wide">AIが画像を解析中...</p>
-                      <p className="text-[11px] text-pink-200">ブランド、状態、説明文を自動抽出しています</p>
+                      <p className="text-xs font-bold tracking-wide">{t.analyzingAiTitle}</p>
+                      <p className="text-[11px] text-pink-200">{t.analyzingAiDesc}</p>
                     </div>
                   </div>
                 )}
@@ -188,8 +204,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                   <Upload className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-800">スマホで撮影、または画像をアップロード</p>
-                  <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP に対応</p>
+                  <p className="text-sm font-bold text-gray-800">{t.uploadPrompt}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t.uploadFormats}</p>
                 </div>
               </div>
             )}
@@ -205,27 +221,32 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             {/* Quick Demo Preset Selector for Stakeholder Walkthrough */}
             <div className="pt-1">
               <span className="text-[11px] font-semibold text-gray-500 block mb-2">
-                💡 デモ用サンプル写真で試す（ワンクリックでAI解析）:
+                {t.samplePhotoPrompt}
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DEMO_PRESET_IMAGES.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAnalyzeImage(preset.url, preset.mockResult)}
-                    className="p-2 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50/40 text-left transition-all flex items-center gap-2 group"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={preset.url}
-                      alt={preset.label}
-                      className="w-8 h-8 rounded-lg object-cover shrink-0"
-                    />
-                    <span className="text-[11px] font-medium text-gray-700 truncate group-hover:text-pink-600">
-                      {preset.label}
-                    </span>
-                  </button>
-                ))}
+                {DEMO_PRESET_IMAGES.map((preset, idx) => {
+                  const label = locale === 'en'
+                    ? ['Stroller (Combi)', 'Carrier (Ergobaby)', 'Wooden Toy', 'Baby Romper Set'][idx] || preset.label
+                    : preset.label;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleAnalyzeImage(preset.url, preset.mockResult)}
+                      className="p-2 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50/40 text-left transition-all flex items-center gap-2 group"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={preset.url}
+                        alt={label}
+                        className="w-8 h-8 rounded-lg object-cover shrink-0"
+                      />
+                      <span className="text-[11px] font-medium text-gray-700 truncate group-hover:text-pink-600">
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -234,9 +255,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
           {aiSuccess && (
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-800">
               <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                <strong>AIによる自動入力が完了しました！</strong> 抽出された内容を確認・必要に応じて編集してください。
-              </span>
+              <span>{t.aiSuccessNotice}</span>
             </div>
           )}
 
@@ -245,11 +264,11 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             
             {/* Title */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">商品タイトル *</label>
+              <label className="block text-gray-700 font-bold mb-1">{t.fieldTitle}</label>
               <input
                 required
                 type="text"
-                placeholder="AIが自動生成します（手動編集も可能）"
+                placeholder={locale === 'en' ? 'Auto-generated by AI (editable)' : 'AIが自動生成します（手動編集も可能）'}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
@@ -259,39 +278,39 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             {/* Category & Condition */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-700 font-bold mb-1">カテゴリ *</label>
+                <label className="block text-gray-700 font-bold mb-1">{t.fieldCategory}</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
                 >
-                  {CATEGORIES.map((c) => (
+                  {categoryList.map((c) => (
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-gray-700 font-bold mb-1">商品の状態 (外観) *</label>
+                <label className="block text-gray-700 font-bold mb-1">{t.fieldCondition}</label>
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as ItemCondition)}
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
                 >
-                  <option value="新品・未使用">新品・未使用</option>
-                  <option value="未使用に近い">未使用に近い</option>
-                  <option value="目立った傷や汚れなし">目立った傷や汚れなし</option>
-                  <option value="やや傷や汚れあり">やや傷や汚れあり</option>
+                  <option value="新品・未使用">{locale === 'en' ? 'Brand New' : '新品・未使用'}</option>
+                  <option value="未使用に近い">{locale === 'en' ? 'Like New' : '未使用に近い'}</option>
+                  <option value="目立った傷や汚れなし">{locale === 'en' ? 'Gently Used' : '目立った傷や汚れなし'}</option>
+                  <option value="やや傷や汚れあり">{locale === 'en' ? 'Fair / Minor Marks' : 'やや傷や汚れあり'}</option>
                 </select>
               </div>
             </div>
 
             {/* Target Age */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">対象月齢・サイズ目安</label>
+              <label className="block text-gray-700 font-bold mb-1">{t.fieldAge}</label>
               <input
                 type="text"
-                placeholder="例: 生後1ヶ月〜3歳頃、体重15kgまで"
+                placeholder={locale === 'en' ? 'e.g. 1 to 3 years old, up to 15kg' : '例: 生後1ヶ月〜3歳頃、体重15kgまで'}
                 value={targetAge}
                 onChange={(e) => setTargetAge(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900"
@@ -300,10 +319,10 @@ export const ListingModal: React.FC<ListingModalProps> = ({
 
             {/* Description */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">AI自動作成の紹介文 (編集可)</label>
+              <label className="block text-gray-700 font-bold mb-1">{t.fieldDescription}</label>
               <textarea
                 rows={3}
-                placeholder="商品の使用頻度やおすすめポイント"
+                placeholder={locale === 'en' ? 'Key features, cleanliness, material' : '商品の使用頻度やおすすめポイント'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 leading-relaxed"
@@ -313,20 +332,20 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             {/* Location & Shipping Method */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-700 font-bold mb-1">発送元都道府県 *</label>
+                <label className="block text-gray-700 font-bold mb-1">{t.fieldLocation}</label>
                 <select
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
                 >
-                  {PREFECTURES.map((p) => (
+                  {prefectureList.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-gray-700 font-bold mb-1">配送方法 (着払い)</label>
+                <label className="block text-gray-700 font-bold mb-1">{t.fieldShipping}</label>
                 <input
                   type="text"
                   value={shippingMethod}
@@ -347,7 +366,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             onClick={onClose}
             className="px-5 py-2.5 rounded-full border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-100 transition-colors"
           >
-            キャンセル
+            {t.cancelBtn}
           </button>
 
           <button
@@ -357,7 +376,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
             className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 disabled:from-gray-300 disabled:to-gray-300 text-white text-xs font-bold shadow-md shadow-pink-500/20 active:scale-95 transition-all"
           >
             <Sparkles className="w-4 h-4 text-yellow-200" />
-            <span>この内容でお譲り出品する (無料)</span>
+            <span>{t.submitListingBtn}</span>
           </button>
         </div>
 
