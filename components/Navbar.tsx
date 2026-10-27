@@ -2,19 +2,25 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Search, Gift, Globe } from 'lucide-react';
+import { Sparkles, Search, Gift, Globe, User, LogOut } from 'lucide-react';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 
 interface NavbarProps {
   locale: Locale;
+  currentUser?: { email?: string } | null;
   onOpenListing: () => void;
+  onOpenAuth: () => void;
+  onLogout?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   locale,
+  currentUser,
   onOpenListing,
+  onOpenAuth,
+  onLogout,
   searchQuery,
   onSearchChange
 }) => {
@@ -22,6 +28,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const otherLocale = locale === 'ja' ? 'en' : 'ja';
   const otherLocalePath = otherLocale === 'en' ? '/en' : '/';
   const otherLocaleLabel = otherLocale === 'en' ? 'English' : '日本語';
+
+  const userInitial = currentUser?.email
+    ? currentUser.email.charAt(0).toUpperCase()
+    : 'U';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-pink-100 shadow-xs">
@@ -58,9 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Right Action CTA & Language Switcher */}
+          {/* Right Actions */}
           <div className="flex items-center gap-2.5">
-            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-800 font-medium">
+            <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-800 font-medium">
               <span>{t.priceBadge}</span>
             </div>
 
@@ -74,6 +84,36 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{otherLocaleLabel}</span>
             </Link>
 
+            {/* User Auth Profile / Button */}
+            {currentUser ? (
+              <div className="flex items-center gap-2 pl-1">
+                <div
+                  title={currentUser.email}
+                  className="w-8 h-8 rounded-full bg-pink-100 border border-pink-200 text-pink-700 font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer"
+                >
+                  {userInitial}
+                </div>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    title={locale === 'en' ? 'Log out' : 'ログアウト'}
+                    className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-gray-200 hover:border-pink-300 hover:bg-pink-50/50 text-xs font-bold text-gray-700 transition-all"
+              >
+                <User className="w-3.5 h-3.5 text-gray-500" />
+                <span>{locale === 'en' ? 'Log In' : 'ログイン'}</span>
+              </button>
+            )}
+
+            {/* AI Listing Button */}
             <button
               onClick={onOpenListing}
               className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-md shadow-pink-500/25 transition-all transform active:scale-95"

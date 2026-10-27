@@ -4,12 +4,22 @@ import React, { useState, useEffect } from 'react';
 import { Item } from '@/lib/types';
 import { CATEGORIES, PREFECTURES, INITIAL_ITEMS } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS } from '@/lib/i18n';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/is-configured';
+import {
+  fetchItemsFromSupabase,
+  insertItemToSupabase,
+  submitClaimToSupabase
+} from '@/lib/supabase/items';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ItemCard } from '@/components/ItemCard';
 import { ItemModal } from '@/components/ItemModal';
 import { ClaimModal } from '@/components/ClaimModal';
 import { ListingModal } from '@/components/ListingModal';
+import { AuthModal } from '@/components/AuthModal';
+import { BottomNav } from '@/components/BottomNav';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { Filter, PackageOpen } from 'lucide-react';
 
 interface AppViewProps {
@@ -29,13 +39,18 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [selectedPrefecture, setSelectedPrefecture] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'claimed'>('all');
 
+  // Auth state
+  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
   // Modals state
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [claimingItem, setClaimingItem] = useState<Item | null>(null);
   const [isListingOpen, setIsListingOpen] = useState(false);
 
-  // Sync with localStorage
+  // Check Supabase Auth & Items on mount
   useEffect(() => {
+    // 1. Check local storage first
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -43,6 +58,39 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       }
     } catch (e) {
       console.warn('Could not read localStorage', e);
+    }
+
+    // 2. If Supabase configured, sync real session & real database items
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseBrowserClient();
+      if (supabase) {
+        // Fetch current session
+        supabase.auth.getUser().then((res: any) => {
+          if (res?.data?.user) {
+            setCurrentUser({ id: res.data.user.id, email: res.data.user.email });
+          }
+        });
+
+        // Listen for auth changes
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+          if (session?.user) {
+            setCurrentUser({ id: session.user.id, email: session.user.email });
+          } else {
+            setCurrentUser(null);
+          }
+        });
+
+        // Fetch live items from Supabase
+        fetchItemsFromSupabase().then((remoteItems) => {
+          if (remoteItems && remoteItems.length > 0) {
+            setItems(remoteItems);
+          }
+        });
+
+        return () => {
+          authListener.subscription.unsubscribe();
+        };
+      }
     }
   }, [storageKey]);
 
@@ -56,16 +104,23 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   };
 
   // Add new item
-  const handleAddListing = (newItem: Item) => {
+  const handleAddListing = async (newItem: Item) => {
+    // 1. Optimistic UI update
     const updated = [newItem, ...items];
     saveItems(updated);
+
+    // 2. Persist to Supabase if configured
+    if (isSupabaseConfigured()) {
+      await insertItemToSupabase(newItem, currentUser?.id);
+    }
   };
 
   // Claim item
-  const handleConfirmClaim = (
+  const handleConfirmClaim = async (
     itemId: string,
     recipientData: { name: string; prefecture: string; address: string; phone: string }
   ) => {
+    // 1. Optimistic UI update
     const updated = items.map((item) => {
       if (item.id === itemId) {
         return {
@@ -93,6 +148,31 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         }
       });
     }
+
+    // 2. Persist to Supabase if configured
+    if (isSupabaseConfigured()) {
+      await submitClaimToSupabase(
+        itemId,
+        {
+          name: recipientData.name,
+          prefecture: recipientData.prefecture,
+          postalCode: '000-0000',
+          address: recipientData.address,
+          phone: recipientData.phone
+        },
+        currentUser?.id
+      );
+    }
+  };
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseBrowserClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    }
+    setCurrentUser(null);
   };
 
   // Filtering
@@ -116,12 +196,15 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900 selection:bg-pink-100 selection:text-pink-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900 selection:bg-pink-100 selection:text-pink-900 pb-20 md:pb-0">
       
       {/* Top Navigation */}
       <Navbar
         locale={locale}
+        currentUser={currentUser}
         onOpenListing={() => setIsListingOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onLogout={handleLogout}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -291,9 +374,29 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       <ListingModal
         isOpen={isListingOpen}
         locale={locale}
+        currentUser={currentUser}
         onClose={() => setIsListingOpen(false)}
         onAddListing={handleAddListing}
       />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        locale={locale}
+        onClose={() => setIsAuthOpen(false)}
+        onAuthSuccess={(userEmail) => {
+          setCurrentUser({ email: userEmail });
+        }}
+      />
+
+      {/* PWA Mobile Navigation & Install Prompt */}
+      <BottomNav
+        locale={locale}
+        currentUser={currentUser}
+        onOpenListing={() => setIsListingOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      <PwaInstallPrompt locale={locale} />
 
     </div>
   );

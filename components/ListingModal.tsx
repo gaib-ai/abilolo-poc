@@ -4,11 +4,14 @@ import React, { useState, useRef } from 'react';
 import { Item, ItemCondition, AiExtractionResult } from '@/lib/types';
 import { CATEGORIES, PREFECTURES, DEMO_PRESET_IMAGES } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES } from '@/lib/i18n';
-import { X, Camera, Upload, Sparkles, Loader2 } from 'lucide-react';
+import { compressImage } from '@/lib/image-utils';
+import { uploadItemImageToStorage } from '@/lib/supabase/items';
+import { X, Camera, Upload, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
 
 interface ListingModalProps {
   isOpen: boolean;
   locale: Locale;
+  currentUser?: { id?: string; email?: string } | null;
   onClose: () => void;
   onAddListing: (newItem: Item) => void;
 }
@@ -16,6 +19,7 @@ interface ListingModalProps {
 export const ListingModal: React.FC<ListingModalProps> = ({
   isOpen,
   locale,
+  currentUser,
   onClose,
   onAddListing
 }) => {
@@ -24,6 +28,8 @@ export const ListingModal: React.FC<ListingModalProps> = ({
   const prefectureList = locale === 'en' ? ENGLISH_PREFECTURES : PREFECTURES;
 
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [imageFileName, setImageFileName] = useState<string>('photo.jpg');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [aiSuccess, setAiSuccess] = useState<boolean>(false);
 
@@ -40,9 +46,12 @@ export const ListingModal: React.FC<ListingModalProps> = ({
   const [estimatedShippingFee, setEstimatedShippingFee] = useState(
     locale === 'en' ? 'Approx. ¥1,200 ~ ¥1,500' : '約 1,200円〜1,500円'
   );
-  const [giverName, setGiverName] = useState(locale === 'en' ? 'Parent User' : 'ママユーザー');
+  const [giverName, setGiverName] = useState(
+    currentUser?.email ? currentUser.email.split('@')[0] : (locale === 'en' ? 'Parent User' : 'ママユーザー')
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -98,21 +107,47 @@ export const ListingModal: React.FC<ListingModalProps> = ({
     }
   };
 
+  // Client-side downscaling and compression before upload
+  const processAndCompressFile = async (file: File) => {
+    try {
+      setIsAnalyzing(true);
+      const { base64, blob } = await compressImage(file, 1200, 1200, 0.8);
+      setImageBlob(blob);
+      setImageFileName(file.name);
+      await handleAnalyzeImage(base64);
+    } catch (err) {
+      console.warn('Canvas compression error, reading raw file:', err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        handleAnalyzeImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      handleAnalyzeImage(base64);
-    };
-    reader.readAsDataURL(file);
+    processAndCompressFile(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedImage || !title) return;
+
+    let finalImageUrl = selectedImage;
+
+    // If Supabase Storage is ready and we have the blob, upload to permanent storage
+    if (imageBlob) {
+      try {
+        const uploadedUrl = await uploadItemImageToStorage(imageBlob, imageFileName);
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        }
+      } catch (err) {
+        console.warn('Supabase storage upload skipped/failed:', err);
+      }
+    }
 
     const newItem: Item = {
       id: `item-${Date.now()}`,
@@ -121,7 +156,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
       condition,
       targetAge: targetAge || (locale === 'en' ? '0 to 3 years' : '0〜3歳頃'),
       description,
-      images: [selectedImage],
+      images: [finalImageUrl],
       location,
       shippingMethod,
       estimatedShippingFee,
@@ -179,9 +214,10 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-white text-gray-800 text-xs font-bold rounded-full shadow-md hover:bg-gray-50"
+                    className="px-4 py-2 bg-white text-gray-800 text-xs font-bold rounded-full shadow-md hover:bg-gray-50 flex items-center gap-1.5"
                   >
-                    {t.changePhoto}
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>{t.changePhoto}</span>
                   </button>
                 </div>
 
@@ -196,24 +232,58 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                 )}
               </div>
             ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-pink-200 hover:border-pink-400 bg-pink-50/30 hover:bg-pink-50/60 rounded-2xl p-8 text-center cursor-pointer transition-all space-y-3"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-white shadow-xs text-pink-600 flex items-center justify-center mx-auto border border-pink-100">
-                  <Upload className="w-6 h-6" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Camera Trigger */}
+                <div
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="border-2 border-dashed border-pink-300 hover:border-pink-500 bg-pink-50/40 hover:bg-pink-50/80 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2 group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-xs text-pink-600 flex items-center justify-center mx-auto border border-pink-100 group-hover:scale-105 transition-transform">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800">
+                      {locale === 'en' ? 'Take Photo with Camera' : 'カメラで今すぐ撮影'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {locale === 'en' ? 'Direct mobile camera' : 'スマホの背面カメラを起動'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">{t.uploadPrompt}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t.uploadFormats}</p>
+
+                {/* File Picker */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 hover:border-pink-300 bg-gray-50/50 hover:bg-pink-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2 group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-xs text-gray-600 flex items-center justify-center mx-auto border border-gray-100 group-hover:scale-105 transition-transform">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800">
+                      {locale === 'en' ? 'Choose from Gallery' : 'アルバムから選択'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{t.uploadFormats}</p>
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Hidden Input: Generic Album */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
+            {/* Hidden Input: Native Mobile Rear Camera */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
               className="hidden"
               onChange={handleFileUpload}
             />
@@ -282,7 +352,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-900 font-medium"
                 >
                   {categoryList.map((c) => (
                     <option key={c.id} value={c.name}>{c.name}</option>
