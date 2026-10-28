@@ -21,7 +21,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isPasswordMode, setIsPasswordMode] = useState(false);
+  const [isPasswordMode, setIsPasswordMode] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -103,22 +103,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!supabase) return;
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
       });
       setLoading(false);
       if (error) {
+        if (error.message.toLowerCase().includes('already registered')) {
+          // Attempt instant sign in
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          if (!loginError && loginData.session) {
+            setMessage({
+              type: 'success',
+              text: locale === 'en' ? 'Logged in successfully!' : 'ログインしました！'
+            });
+            if (onAuthSuccess && loginData.user?.email) onAuthSuccess(loginData.user.email);
+            setTimeout(onClose, 800);
+            return;
+          }
+        }
         setMessage({ type: 'error', text: error.message });
+      } else if (data.session) {
+        setMessage({
+          type: 'success',
+          text: locale === 'en' ? 'Account created & logged in!' : 'アカウントを作成してログインしました！'
+        });
+        if (onAuthSuccess && data.user?.email) onAuthSuccess(data.user.email);
+        setTimeout(onClose, 800);
       } else {
         setMessage({
           type: 'success',
           text: locale === 'en'
-            ? 'Account created! Please check your email for the confirmation link.'
-            : 'アカウントを登録しました！確認メール内のリンクをクリックしてください。'
+            ? 'Account created! (Please turn off "Confirm email" in Supabase if email delivery is delayed)'
+            : 'アカウントを登録しました！'
         });
       }
     } else {
