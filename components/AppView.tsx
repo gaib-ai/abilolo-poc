@@ -106,12 +106,20 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   // Add new item
   const handleAddListing = async (newItem: Item) => {
     // 1. Optimistic UI update
-    const updated = [newItem, ...items];
-    saveItems(updated);
+    setItems((prev) => [newItem, ...prev]);
 
     // 2. Persist to Supabase if configured
     if (isSupabaseConfigured()) {
-      await insertItemToSupabase(newItem, currentUser?.id);
+      const persisted = await insertItemToSupabase(newItem, currentUser?.id);
+      if (persisted) {
+        setItems((prev) => [persisted, ...prev.filter((i) => i.id !== newItem.id)]);
+        saveItems([persisted, ...items.filter((i) => i.id !== newItem.id)]);
+      } else {
+        console.warn('Supabase persistence returned null, kept in localStorage');
+        saveItems([newItem, ...items]);
+      }
+    } else {
+      saveItems([newItem, ...items]);
     }
   };
 

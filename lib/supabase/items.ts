@@ -76,12 +76,12 @@ export async function fetchItemsFromSupabase(): Promise<Item[] | null> {
   }
 }
 
-export async function insertItemToSupabase(item: Item, userId?: string): Promise<boolean> {
+export async function insertItemToSupabase(item: Item, userId?: string): Promise<Item | null> {
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) return false;
+  if (!supabase) return null;
 
   try {
-    const { error } = await supabase.from('items').insert({
+    const { data, error } = await supabase.from('items').insert({
       user_id: userId || null,
       title: item.title,
       category: item.category,
@@ -97,17 +97,34 @@ export async function insertItemToSupabase(item: Item, userId?: string): Promise
       status: 'available',
       views: 1,
       likes: 0
-    });
+    }).select().single();
 
     if (error) {
       console.error('Error inserting item to Supabase:', error);
-      return false;
+      return null;
     }
 
-    return true;
+    return {
+      id: data.id,
+      title: data.title,
+      category: data.category,
+      subCategory: data.sub_category,
+      condition: data.condition,
+      description: data.description,
+      targetAge: data.target_age || '',
+      images: data.images || [],
+      location: data.location,
+      shippingMethod: data.shipping_method,
+      estimatedShippingFee: data.estimated_shipping_fee,
+      giverName: data.giver_name || '出品者',
+      createdAt: data.created_at ? data.created_at.split('T')[0] : '',
+      status: data.status,
+      views: data.views || 0,
+      likes: data.likes || 0
+    };
   } catch (err) {
     console.error('Supabase item insert exception:', err);
-    return false;
+    return null;
   }
 }
 
