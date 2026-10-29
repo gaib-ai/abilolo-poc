@@ -204,7 +204,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900 selection:bg-pink-100 selection:text-pink-900 pb-20 md:pb-0">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900 selection:bg-pink-100 selection:text-pink-900 pb-32 sm:pb-36 md:pb-12">
       
       {/* Top Navigation */}
       <Navbar
