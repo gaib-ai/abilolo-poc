@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Item } from '@/lib/types';
-import { X, MapPin, Sparkles, HeartHandshake, AlertCircle } from 'lucide-react';
+import { X, MapPin, Sparkles, HeartHandshake, AlertCircle, MessageCircle, User } from 'lucide-react';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 
 interface ItemModalProps {
@@ -10,13 +10,17 @@ interface ItemModalProps {
   locale: Locale;
   onClose: () => void;
   onRequestClaim: (item: Item) => void;
+  onOpenProfile?: (userId: string) => void;
+  onStartChat?: (userId: string, userName: string, userAvatar: string, item?: Item) => void;
 }
 
 export const ItemModal: React.FC<ItemModalProps> = ({
   item,
   locale,
   onClose,
-  onRequestClaim
+  onRequestClaim,
+  onOpenProfile,
+  onStartChat
 }) => {
   if (!item) return null;
 
@@ -84,12 +88,30 @@ export const ItemModal: React.FC<ItemModalProps> = ({
               {item.title}
             </h2>
 
-            <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                {locale === 'en' ? 'Location: ' : '発送元: '}{item.location}
+                <MapPin className="w-3.5 h-3.5 text-pink-500" />
+                {item.neighborhood || item.location}
               </span>
-              <span>{t.giverLabel} {item.giverName}</span>
+              
+              {/* Clickable Giver Profile Link */}
+              <button
+                onClick={() => onOpenProfile && onOpenProfile(item.giverId || 'user-sakura')}
+                className="flex items-center gap-1.5 font-bold text-gray-800 hover:text-pink-600 transition-colors bg-gray-50 hover:bg-pink-50 px-2 py-1 rounded-lg border border-gray-100"
+              >
+                {item.giverAvatar ? (
+                  <img
+                    src={item.giverAvatar}
+                    alt={item.giverName}
+                    className="w-4 h-4 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-3.5 h-3.5 text-gray-400" />
+                )}
+                <span>{item.giverName}</span>
+                <span className="text-[10px] text-pink-600">({t.viewProfileBtn})</span>
+              </button>
+
               <span>{locale === 'en' ? 'Listed: ' : '登録日: '}{item.createdAt}</span>
             </div>
           </div>
@@ -132,32 +154,34 @@ export const ItemModal: React.FC<ItemModalProps> = ({
         </div>
 
         {/* Modal Footer CTA */}
-        <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="hidden sm:block">
             <span className="text-xs text-gray-500 block">{locale === 'en' ? 'Item Price' : '商品価格'}</span>
             <span className="text-2xl font-black text-pink-600">¥0</span>
             <span className="text-[10px] text-gray-400 ml-1">({locale === 'en' ? 'Recipient covers shipping only' : '送料のみ自己負担'})</span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Message Giver CTA */}
             <button
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-full border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-100 transition-colors"
+              onClick={() => onStartChat && onStartChat(item.giverId || 'user-sakura', item.giverName, item.giverAvatar || '', item)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border border-pink-200 bg-pink-50 text-pink-700 text-xs font-bold hover:bg-pink-100 transition-colors active:scale-95"
             >
-              {t.closeBtn}
+              <MessageCircle className="w-4 h-4" />
+              <span>{t.messageGiverBtn}</span>
             </button>
 
             {isClaimed ? (
               <button
                 disabled
-                className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-gray-300 text-gray-500 text-sm font-bold cursor-not-allowed"
+                className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-gray-300 text-gray-500 text-xs font-bold cursor-not-allowed"
               >
                 {t.alreadyClaimedBtn}
               </button>
             ) : (
               <button
                 onClick={() => onRequestClaim(item)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-sm font-bold shadow-md shadow-pink-500/20 active:scale-95 transition-all"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-bold shadow-md shadow-pink-500/20 active:scale-95 transition-all"
               >
                 <HeartHandshake className="w-4 h-4" />
                 <span>{t.requestItemBtn}</span>
