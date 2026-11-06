@@ -62,9 +62,14 @@ export async function fetchItemsFromSupabase(): Promise<Item[] | null> {
       targetAge: row.target_age || '',
       images: row.images || [],
       location: row.location,
+      neighborhood: row.neighborhood || '東京都新宿区',
+      latitude: row.latitude ? parseFloat(row.latitude) : 35.6938,
+      longitude: row.longitude ? parseFloat(row.longitude) : 139.7034,
       shippingMethod: row.shipping_method,
       estimatedShippingFee: row.estimated_shipping_fee,
       giverName: row.giver_name || '出品者',
+      giverId: row.giver_id || row.user_id || 'user-sakura',
+      giverAvatar: row.giver_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
       createdAt: row.created_at ? row.created_at.split('T')[0] : '',
       status: row.status,
       views: row.views || 0,
@@ -91,9 +96,14 @@ export async function insertItemToSupabase(item: Item, userId?: string): Promise
       target_age: item.targetAge,
       images: item.images,
       location: item.location,
+      neighborhood: item.neighborhood || '東京都新宿区 (西新宿)',
+      latitude: item.latitude || 35.6938,
+      longitude: item.longitude || 139.7034,
       shipping_method: item.shippingMethod,
       estimated_shipping_fee: item.estimatedShippingFee || null,
       giver_name: item.giverName,
+      giver_id: item.giverId || userId || null,
+      giver_avatar: item.giverAvatar || null,
       status: 'available',
       views: 1,
       likes: 0
@@ -114,9 +124,14 @@ export async function insertItemToSupabase(item: Item, userId?: string): Promise
       targetAge: data.target_age || '',
       images: data.images || [],
       location: data.location,
+      neighborhood: data.neighborhood,
+      latitude: data.latitude ? parseFloat(data.latitude) : 35.6938,
+      longitude: data.longitude ? parseFloat(data.longitude) : 139.7034,
       shippingMethod: data.shipping_method,
       estimatedShippingFee: data.estimated_shipping_fee,
       giverName: data.giver_name || '出品者',
+      giverId: data.giver_id || data.user_id,
+      giverAvatar: data.giver_avatar,
       createdAt: data.created_at ? data.created_at.split('T')[0] : '',
       status: data.status,
       views: data.views || 0,
@@ -137,7 +152,6 @@ export async function submitClaimToSupabase(
   if (!supabase) return false;
 
   try {
-    // 1. Insert claim record
     const { error: claimError } = await supabase.from('claims').insert({
       item_id: itemId,
       recipient_id: userId || null,
@@ -155,7 +169,6 @@ export async function submitClaimToSupabase(
       return false;
     }
 
-    // 2. Mark item as claimed
     const { error: itemUpdateError } = await supabase
       .from('items')
       .update({ status: 'claimed' })

@@ -36,8 +36,10 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   useEffect(() => {
     if (activeRoomId) {
       setSelectedRoomId(activeRoomId);
+    } else if (!selectedRoomId && rooms.length > 0) {
+      setSelectedRoomId(rooms[0].id);
     }
-  }, [activeRoomId]);
+  }, [activeRoomId, rooms, selectedRoomId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,13 +47,14 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const currentRoom = rooms.find((r) => r.id === selectedRoomId);
-  const currentMessages = selectedRoomId && messages[selectedRoomId] ? messages[selectedRoomId] : [];
+  const currentRoom = rooms.find((r) => r.id === selectedRoomId) || (rooms.length > 0 ? rooms[0] : null);
+  const effectiveRoomId = currentRoom?.id || null;
+  const currentMessages = effectiveRoomId && messages[effectiveRoomId] ? messages[effectiveRoomId] : [];
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !selectedRoomId) return;
-    onSendMessage(selectedRoomId, inputText.trim());
+    if (!inputText.trim() || !effectiveRoomId) return;
+    onSendMessage(effectiveRoomId, inputText.trim());
     setInputText('');
   };
 

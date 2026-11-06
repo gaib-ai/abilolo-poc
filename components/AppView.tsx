@@ -11,6 +11,15 @@ import {
   insertItemToSupabase,
   submitClaimToSupabase
 } from '@/lib/supabase/items';
+import {
+  fetchCommunityPostsFromSupabase,
+  insertCommunityPostToSupabase
+} from '@/lib/supabase/posts';
+import {
+  fetchChatRoomsFromSupabase,
+  fetchChatMessagesFromSupabase,
+  insertChatMessageToSupabase
+} from '@/lib/supabase/chats';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ItemCard } from '@/components/ItemCard';
@@ -36,26 +45,23 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const categoryList = locale === 'en' ? ENGLISH_CATEGORIES : CATEGORIES;
   const prefectureList = locale === 'en' ? ENGLISH_PREFECTURES : PREFECTURES;
   const storageKey = `abilolo_items_${locale}`;
-  const postsKey = `abilolo_posts_${locale}`;
-  const chatsKey = `abilolo_chats_${locale}`;
-  const msgsKey = `abilolo_msgs_${locale}`;
 
   // Main active tab
   const [currentTab, setCurrentTab] = useState<'market' | 'map' | 'community'>('market');
 
-  // Items State
+  // Items State (Full remote persistence)
   const [items, setItems] = useState<Item[]>(initialData);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPrefecture, setSelectedPrefecture] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'claimed'>('all');
 
-  // Social & Community State
+  // Social & Community State (Full remote persistence)
   const [posts, setPosts] = useState<CommunityPost[]>(DEMO_POSTS);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>(DEMO_PROFILES);
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
 
-  // Chat State
+  // Chat State (Full remote persistence + Realtime)
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>(DEMO_CHAT_ROOMS);
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>(DEMO_CHAT_MESSAGES);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -70,29 +76,12 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [claimingItem, setClaimingItem] = useState<Item | null>(null);
   const [isListingOpen, setIsListingOpen] = useState(false);
 
-  // Initialize from LocalStorage or Supabase
+  // 1. Initial Load & Realtime Subscriptions
   useEffect(() => {
-    // 1. Items
-    try {
-      const savedItems = localStorage.getItem(storageKey);
-      if (savedItems) setItems(JSON.parse(savedItems));
-      
-      const savedPosts = localStorage.getItem(postsKey);
-      if (savedPosts) setPosts(JSON.parse(savedPosts));
-
-      const savedRooms = localStorage.getItem(chatsKey);
-      if (savedRooms) setChatRooms(JSON.parse(savedRooms));
-
-      const savedMsgs = localStorage.getItem(msgsKey);
-      if (savedMsgs) setChatMessages(JSON.parse(savedMsgs));
-    } catch (e) {
-      console.warn('Could not read localStorage', e);
-    }
-
-    // 2. Supabase live sync if configured
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseBrowserClient();
       if (supabase) {
+        // Auth check
         supabase.auth.getUser().then((res: any) => {
           if (res?.data?.user) {
             setCurrentUser({ id: res.data.user.id, email: res.data.user.email });
@@ -107,38 +96,79 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           }
         });
 
+        // 1. Fetch real items from remote Supabase DB
         fetchItemsFromSupabase().then((remoteItems) => {
           if (remoteItems && remoteItems.length > 0) {
             setItems(remoteItems);
           }
         });
 
+        // 2. Fetch real community posts from remote Supabase DB
+        fetchCommunityPostsFromSupabase().then((remotePosts) => {
+          if (remotePosts && remotePosts.length > 0) {
+            setPosts(remotePosts);
+          }
+        });
+
+        // 3. Fetch real chat rooms & initial messages from remote Supabase DB
+        fetchChatRoomsFromSupabase().then((remoteRooms) => {
+          if (remoteRooms && remoteRooms.length > 0) {
+            setChatRooms(remoteRooms);
+            // Fetch messages for each room
+            remoteRooms.forEach((r) => {
+              fetchChatMessagesFromSupabase(r.id).then((msgs) => {
+                if (msgs) {
+                  setChatMessages((prev) => ({
+                    ...prev,
+                    [r.id]: msgs
+                  }));
+                }
+              });
+            });
+          }
+        });
+
+        // 4. Realtime Subscription on chat_messages
+        const realtimeChannel = supabase
+          .channel('public:chat_messages')
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+            (payload: any) => {
+              const row = payload.new;
+              if (row && row.room_id) {
+                const incomingMsg: ChatMessage = {
+                  id: row.id,
+                  roomId: row.room_id,
+                  senderId: row.sender_id,
+                  senderName: row.sender_name,
+                  senderAvatar: row.sender_avatar,
+                  content: row.content,
+                  createdAt: new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isMine: row.sender_id === (currentUser?.id || 'me')
+                };
+
+                setChatMessages((prev) => ({
+                  ...prev,
+                  [row.room_id]: [
+                    ...(prev[row.room_id] || []).filter((m) => m.id !== incomingMsg.id),
+                    incomingMsg
+                  ]
+                }));
+              }
+            }
+          )
+          .subscribe();
+
         return () => {
           authListener.subscription.unsubscribe();
+          supabase.removeChannel(realtimeChannel);
         };
       }
     }
-  }, [storageKey, postsKey, chatsKey, msgsKey]);
+  }, [storageKey, currentUser?.id]);
 
-  const saveItems = (newItems: Item[]) => {
-    setItems(newItems);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(newItems));
-    } catch (e) {
-      console.warn('Could not save to localStorage', e);
-    }
-  };
-
-  const savePosts = (newPosts: CommunityPost[]) => {
-    setPosts(newPosts);
-    try {
-      localStorage.setItem(postsKey, JSON.stringify(newPosts));
-    } catch (e) {
-      console.warn('Could not save posts', e);
-    }
-  };
-
-  // Add new item
+  // Add new item with DB persistence
   const handleAddListing = async (newItem: Item) => {
     setItems((prev) => [newItem, ...prev]);
 
@@ -146,16 +176,11 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       const persisted = await insertItemToSupabase(newItem, currentUser?.id);
       if (persisted) {
         setItems((prev) => [persisted, ...prev.filter((i) => i.id !== newItem.id)]);
-        saveItems([persisted, ...items.filter((i) => i.id !== newItem.id)]);
-      } else {
-        saveItems([newItem, ...items]);
       }
-    } else {
-      saveItems([newItem, ...items]);
     }
   };
 
-  // Claim item
+  // Claim item with DB persistence
   const handleConfirmClaim = async (
     itemId: string,
     recipientData: { name: string; prefecture: string; address: string; phone: string }
@@ -174,7 +199,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       }
       return item;
     });
-    saveItems(updated);
+    setItems(updated);
 
     if (selectedItem && selectedItem.id === itemId) {
       setSelectedItem({
@@ -210,7 +235,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       username: 'user_' + userId.slice(-4),
       displayName: '子育てユーザー 🌸',
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-      bio: '使わなくなったベビー服や知育玩具を大切にお譲りしています！',
+      bio: '使わなくなったベビー服や知育玩具を大切にお譲りしています！お気軽にDMどうぞ✨',
       neighborhood: '東京都新宿区',
       prefecture: '東京都',
       babyStages: ['0-6ヶ月 (乳児)'],
@@ -225,12 +250,12 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   };
 
   // Start chat with user / about item
-  const handleStartChat = (userId: string, userName: string, userAvatar: string, item?: Item) => {
+  const handleStartChat = async (userId: string, userName: string, userAvatar: string, item?: Item) => {
     let room = chatRooms.find((r) => r.participant.id === userId);
 
     if (!room) {
-      room = {
-        id: `room-${Date.now()}`,
+      const newRoom: ChatRoom = {
+        id: `c0000000-0000-0000-${Math.floor(Math.random() * 8999 + 1000)}-${Date.now().toString(16).slice(-12).padStart(12, '0')}`,
         participant: {
           id: userId,
           name: userName,
@@ -245,12 +270,26 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         unreadCount: 0
       };
 
-      const updatedRooms = [room, ...chatRooms];
-      setChatRooms(updatedRooms);
-      try {
-        localStorage.setItem(chatsKey, JSON.stringify(updatedRooms));
-      } catch (e) {
-        console.warn('save rooms', e);
+      setChatRooms((prev) => [newRoom, ...prev]);
+      room = newRoom;
+
+      // Persist new chat room to Supabase DB
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseBrowserClient();
+        if (supabase) {
+          await supabase.from('chat_rooms').insert({
+            id: newRoom.id,
+            participant_id: userId,
+            participant_name: userName,
+            participant_avatar: userAvatar || null,
+            participant_neighborhood: item?.neighborhood || '東京都新宿区',
+            item_id: item?.id && item.id.includes('-') && item.id.length === 36 ? item.id : null,
+            item_title: item?.title || null,
+            item_image: item?.images[0] || null,
+            last_message: newRoom.lastMessage,
+            unread_count: 0
+          });
+        }
       }
     }
 
@@ -258,79 +297,64 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     setIsChatOpen(true);
   };
 
-  // Send message
-  const handleSendMessage = (roomId: string, content: string) => {
+  // Send message with remote DB write
+  const handleSendMessage = async (roomId: string, content: string) => {
+    const tempId = `msg-${Date.now()}`;
     const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: tempId,
       roomId,
-      senderId: 'me',
-      senderName: 'あなた',
+      senderId: currentUser?.id || 'me',
+      senderName: currentUser?.email?.split('@')[0] || 'あなた',
       content,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMine: true
     };
 
-    const updated = {
-      ...chatMessages,
-      [roomId]: [...(chatMessages[roomId] || []), newMsg]
-    };
-    setChatMessages(updated);
+    // Optimistic UI update
+    setChatMessages((prev) => ({
+      ...prev,
+      [roomId]: [...(prev[roomId] || []), newMsg]
+    }));
 
-    // Update room last message
-    const updatedRooms = chatRooms.map((r) =>
-      r.id === roomId
-        ? { ...r, lastMessage: content, lastMessageAt: '今' }
-        : r
+    setChatRooms((prev) =>
+      prev.map((r) =>
+        r.id === roomId
+          ? { ...r, lastMessage: content, lastMessageAt: '今' }
+          : r
+      )
     );
-    setChatRooms(updatedRooms);
 
-    try {
-      localStorage.setItem(msgsKey, JSON.stringify(updated));
-      localStorage.setItem(chatsKey, JSON.stringify(updatedRooms));
-    } catch (e) {
-      console.warn('save chat', e);
+    // Persist message to Supabase DB
+    if (isSupabaseConfigured()) {
+      await insertChatMessageToSupabase(
+        roomId,
+        content,
+        currentUser?.id || 'me',
+        currentUser?.email?.split('@')[0] || 'あなた'
+      );
     }
-
-    // Friendly auto-response simulation after 1.5s
-    setTimeout(() => {
-      const room = chatRooms.find((r) => r.id === roomId);
-      if (room) {
-        const replyMsg: ChatMessage = {
-          id: `reply-${Date.now()}`,
-          roomId,
-          senderId: room.participant.id,
-          senderName: room.participant.name,
-          senderAvatar: room.participant.avatar,
-          content: 'ご連絡ありがとうございます！着払いでの発送手続き、喜んで対応させていただきますね✨',
-          createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isMine: false
-        };
-
-        setChatMessages((prev) => {
-          const next = {
-            ...prev,
-            [roomId]: [...(prev[roomId] || []), replyMsg]
-          };
-          try {
-            localStorage.setItem(msgsKey, JSON.stringify(next));
-          } catch (e) {}
-          return next;
-        });
-      }
-    }, 1500);
   };
 
-  // Add Community Post
-  const handleAddPost = (newPostData: Omit<CommunityPost, 'id' | 'likes' | 'commentCount' | 'createdAt'>) => {
-    const newPost: CommunityPost = {
+  // Add Community Post with remote DB write
+  const handleAddPost = async (newPostData: Omit<CommunityPost, 'id' | 'likes' | 'commentCount' | 'createdAt'>) => {
+    // Optimistic UI update
+    const tempPost: CommunityPost = {
       ...newPostData,
       id: `post-${Date.now()}`,
-      likes: 1,
-      isLiked: true,
+      likes: 0,
+      isLiked: false,
       commentCount: 0,
       createdAt: '今日'
     };
-    savePosts([newPost, ...posts]);
+    setPosts((prev) => [tempPost, ...prev]);
+
+    // Persist to Supabase DB
+    if (isSupabaseConfigured()) {
+      const persisted = await insertCommunityPostToSupabase(newPostData);
+      if (persisted) {
+        setPosts((prev) => [persisted, ...prev.filter((p) => p.id !== tempPost.id)]);
+      }
+    }
   };
 
   const handleLogout = async () => {
