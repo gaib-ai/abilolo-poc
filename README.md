@@ -47,7 +47,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 ## 📦 Vercel へのデプロイ手順 (Zero DevOps)
 1. [Vercel Dashboard](https://vercel.com/dashboard) で **Add New Project** を選択。
-2. GitHub リポジトリ `gaib-ai/abilolo-poc` をインポート。
+2. GitHub リポジトリ `Abilolo-dev/abilolo` をインポート。
 3. Framework Preset が `Next.js` であることを確認。
 4. **Deploy** をクリック（約60秒で完了）。
 5. 発行された `https://abilolo-poc.vercel.app` をステークホルダーへ共有。
