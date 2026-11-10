@@ -33,6 +33,8 @@ export interface Item {
   };
   views: number;
   likes: number;
+  isLiked?: boolean;
+  commentCount?: number;
 }
 
 export interface CategoryInfo {
@@ -87,6 +89,26 @@ export interface CommunityPost {
   commentCount: number;
   createdAt: string;
   category: 'tip' | 'request' | 'chat';
+}
+
+export interface ItemComment {
+  id: string;
+  itemId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface ChatMessage {

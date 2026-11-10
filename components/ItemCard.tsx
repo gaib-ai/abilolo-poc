@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { Item } from '@/lib/types';
-import { MapPin, Eye } from 'lucide-react';
+import { MapPin, Eye, Heart, MessageCircle } from 'lucide-react';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 
 interface ItemCardProps {
   item: Item;
   locale: Locale;
   onSelect: (item: Item) => void;
+  onToggleLike?: (itemId: string) => void;
+  onOpenProfile?: (userId: string) => void;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, locale, onSelect }) => {
+export const ItemCard: React.FC<ItemCardProps> = ({ item, locale, onSelect, onToggleLike, onOpenProfile }) => {
   const isClaimed = item.status === 'claimed';
   const t = DICTIONARY[locale];
 
@@ -63,6 +65,23 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, locale, onSelect }) =>
           </div>
         )}
 
+        {/* Top Right Like Button */}
+        <button
+          type="button"
+          aria-label={item.isLiked ? t.likedItemBtn : t.likeItemBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLike?.(item.id);
+          }}
+          className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm active:scale-125 ${
+            item.isLiked
+              ? 'bg-white text-pink-600 shadow-pink-200'
+              : 'bg-white/80 backdrop-blur-sm text-gray-500 hover:text-pink-600 hover:bg-white'
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${item.isLiked ? 'fill-pink-600' : ''}`} />
+        </button>
+
         {/* Location pill */}
         <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
           <MapPin className="w-2.5 h-2.5" />
@@ -105,10 +124,31 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, locale, onSelect }) =>
 
         {/* Footer Meta */}
         <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
-          <span className="truncate max-w-[120px]">{t.giverLabel} {item.giverName}</span>
-          <div className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            <span>{item.views}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenProfile?.(item.giverId || 'user-sakura');
+            }}
+            className="truncate max-w-[130px] font-semibold text-gray-600 hover:text-pink-600 transition-colors text-left"
+          >
+            {t.giverLabel} {item.giverName}
+          </button>
+          <div className="flex items-center gap-2 text-gray-400">
+            {item.commentCount ? (
+              <span className="flex items-center gap-0.5">
+                <MessageCircle className="w-3 h-3 text-gray-400" />
+                <span>{item.commentCount}</span>
+              </span>
+            ) : null}
+            <span className="flex items-center gap-0.5">
+              <Heart className={`w-3 h-3 ${item.isLiked ? 'text-pink-500 fill-pink-500' : 'text-gray-400'}`} />
+              <span>{item.likes}</span>
+            </span>
+            <span className="flex items-center gap-0.5">
+              <Eye className="w-3 h-3" />
+              <span>{item.views}</span>
+            </span>
           </div>
         </div>
       </div>

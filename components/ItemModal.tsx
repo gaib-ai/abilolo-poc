@@ -1,31 +1,46 @@
 'use client';
 
-import React from 'react';
-import { Item } from '@/lib/types';
-import { X, MapPin, Sparkles, HeartHandshake, AlertCircle, MessageCircle, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { Item, ItemComment } from '@/lib/types';
+import { X, MapPin, Sparkles, HeartHandshake, AlertCircle, MessageCircle, User, Heart, Send } from 'lucide-react';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 
 interface ItemModalProps {
   item: Item | null;
   locale: Locale;
+  comments?: ItemComment[];
   onClose: () => void;
   onRequestClaim: (item: Item) => void;
   onOpenProfile?: (userId: string) => void;
   onStartChat?: (userId: string, userName: string, userAvatar: string, item?: Item) => void;
+  onToggleLike?: (itemId: string) => void;
+  onAddComment?: (itemId: string, content: string) => void;
 }
 
 export const ItemModal: React.FC<ItemModalProps> = ({
   item,
   locale,
+  comments = [],
   onClose,
   onRequestClaim,
   onOpenProfile,
-  onStartChat
+  onStartChat,
+  onToggleLike,
+  onAddComment
 }) => {
+  const [commentText, setCommentText] = useState('');
+
   if (!item) return null;
 
   const isClaimed = item.status === 'claimed';
   const t = DICTIONARY[locale];
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    onAddComment?.(item.id, commentText.trim());
+    setCommentText('');
+  };
 
   const conditionDisplay = locale === 'en'
     ? {
@@ -151,6 +166,80 @@ export const ItemModal: React.FC<ItemModalProps> = ({
             </div>
           </div>
 
+          {/* Comments & Community Questions */}
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-pink-500" />
+                <h3 className="text-xs sm:text-sm font-bold text-gray-900">
+                  {t.itemCommentsTitle} ({comments.length})
+                </h3>
+              </div>
+              <span className="text-[11px] text-gray-400">
+                {locale === 'en' ? 'Public questions' : '出品者への公開質問'}
+              </span>
+            </div>
+
+            {/* Comments list */}
+            {comments.length > 0 ? (
+              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                {comments.map((c) => (
+                  <div key={c.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-2xs text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => onOpenProfile?.(c.authorId)}
+                        className="flex items-center gap-1.5 font-bold text-gray-800 hover:text-pink-600 transition-colors"
+                      >
+                        <img src={c.authorAvatar} alt={c.authorName} className="w-5 h-5 rounded-full object-cover" />
+                        <span>{c.authorName}</span>
+                      </button>
+                      <span className="text-[10px] text-gray-400">{c.createdAt}</span>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed pl-6.5">{c.content}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-xs text-gray-400 bg-white/70 rounded-xl border border-dashed border-gray-200">
+                {locale === 'en' ? 'No comments or questions yet. Be the first to ask!' : 'まだ質問はありません。気になる点を出品者に聞いてみましょう！'}
+              </div>
+            )}
+
+            {/* Quick Suggestion Chips */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {[t.itemCommentQuickTag1, t.itemCommentQuickTag2, t.itemCommentQuickTag3, t.itemCommentQuickTag4].map((tag, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCommentText(tag)}
+                  className="text-[10px] bg-white hover:bg-pink-50 hover:text-pink-700 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Comment Input */}
+            <form onSubmit={handleCommentSubmit} className="flex gap-2 pt-1">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={t.itemCommentPlaceholder}
+                className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-800"
+              />
+              <button
+                type="submit"
+                disabled={!commentText.trim()}
+                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{t.itemCommentSubmit}</span>
+              </button>
+            </form>
+          </div>
+
         </div>
 
         {/* Modal Footer CTA */}
@@ -162,6 +251,21 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Like Button */}
+            <button
+              type="button"
+              onClick={() => onToggleLike?.(item.id)}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-full border text-xs font-bold transition-all active:scale-95 ${
+                item.isLiked
+                  ? 'border-pink-300 bg-pink-50 text-pink-700 shadow-xs'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:text-pink-600'
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${item.isLiked ? 'fill-pink-600 text-pink-600' : ''}`} />
+              <span>{item.isLiked ? t.likedItemBtn : t.likeItemBtn}</span>
+              <span className="text-[11px] text-gray-400">({item.likes})</span>
+            </button>
+
             {/* Message Giver CTA */}
             <button
               onClick={() => onStartChat && onStartChat(item.giverId || 'user-sakura', item.giverName, item.giverAvatar || '', item)}
