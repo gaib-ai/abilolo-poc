@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Item, CommunityPost, UserProfile, ChatRoom, ChatMessage } from '@/lib/types';
-import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES } from '@/lib/data';
+import { Item, CommunityPost, UserProfile, ChatRoom, ChatMessage, ItemComment, PostComment } from '@/lib/types';
+import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES, DEMO_ITEM_COMMENTS, DEMO_POST_COMMENTS } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS } from '@/lib/i18n';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/is-configured';
@@ -60,6 +60,16 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [posts, setPosts] = useState<CommunityPost[]>(DEMO_POSTS);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>(DEMO_PROFILES);
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
+  const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>(DEMO_ITEM_COMMENTS);
+  const [postComments, setPostComments] = useState<Record<string, PostComment[]>>(DEMO_POST_COMMENTS);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2400);
+  };
 
   // Chat State (Full remote persistence + Realtime)
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>(DEMO_CHAT_ROOMS);
@@ -344,7 +354,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       likes: 0,
       isLiked: false,
       commentCount: 0,
-      createdAt: '今日'
+      createdAt: locale === 'en' ? 'Today' : '今日'
     };
     setPosts((prev) => [tempPost, ...prev]);
 
@@ -355,6 +365,137 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         setPosts((prev) => [persisted, ...prev.filter((p) => p.id !== tempPost.id)]);
       }
     }
+    showToast(locale === 'en' ? 'Post published!' : '投稿を公開しました！');
+  };
+
+  // Toggle Like on Item
+  const handleToggleLikeItem = (itemId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          const willBeLiked = !item.isLiked;
+          return {
+            ...item,
+            isLiked: willBeLiked,
+            likes: Math.max(0, item.likes + (willBeLiked ? 1 : -1))
+          };
+        }
+        return item;
+      })
+    );
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem((prev) => {
+        if (!prev) return null;
+        const willBeLiked = !prev.isLiked;
+        return {
+          ...prev,
+          isLiked: willBeLiked,
+          likes: Math.max(0, prev.likes + (willBeLiked ? 1 : -1))
+        };
+      });
+    }
+
+    showToast(locale === 'en' ? 'Updated favorites' : 'いいねを更新しました');
+  };
+
+  // Add Comment on Item
+  const handleAddItemComment = (itemId: string, content: string) => {
+    const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'];
+    const newComment: ItemComment = {
+      id: `ic-${Date.now()}`,
+      itemId,
+      authorId: userProfile.id,
+      authorName: userProfile.displayName,
+      authorAvatar: userProfile.avatarUrl,
+      content,
+      createdAt: locale === 'en' ? 'Just now' : 'たった今'
+    };
+
+    setItemComments((prev) => ({
+      ...prev,
+      [itemId]: [...(prev[itemId] || []), newComment]
+    }));
+
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? { ...item, commentCount: (item.commentCount || 0) + 1 }
+          : item
+      )
+    );
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem((prev) =>
+        prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null
+      );
+    }
+
+    showToast(locale === 'en' ? 'Question/comment posted!' : '質問・コメントを送信しました！');
+  };
+
+  // Toggle Like on Community Post
+  const handleToggleLikePost = (postId: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === postId) {
+          const willBeLiked = !p.isLiked;
+          return {
+            ...p,
+            isLiked: willBeLiked,
+            likes: Math.max(0, p.likes + (willBeLiked ? 1 : -1))
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  // Add Comment on Community Post
+  const handleAddPostComment = (postId: string, content: string) => {
+    const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'];
+    const newComment: PostComment = {
+      id: `pc-${Date.now()}`,
+      postId,
+      authorId: userProfile.id,
+      authorName: userProfile.displayName,
+      authorAvatar: userProfile.avatarUrl,
+      content,
+      createdAt: locale === 'en' ? 'Just now' : 'たった今'
+    };
+
+    setPostComments((prev) => ({
+      ...prev,
+      [postId]: [...(prev[postId] || []), newComment]
+    }));
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? { ...p, commentCount: (p.commentCount || 0) + 1 }
+          : p
+      )
+    );
+
+    showToast(locale === 'en' ? 'Reply posted!' : '返信コメントを送信しました！');
+  };
+
+  // Update Profile
+  const handleUpdateProfile = (updated: Partial<UserProfile>) => {
+    const targetId = activeProfile?.id || 'user-me';
+    setProfiles((prev) => {
+      const current = prev[targetId] || DEMO_PROFILES['user-me'];
+      return {
+        ...prev,
+        [targetId]: { ...current, ...updated }
+      };
+    });
+
+    if (activeProfile) {
+      setActiveProfile((prev) => (prev ? { ...prev, ...updated } : null));
+    }
+
+    showToast(locale === 'en' ? 'Profile updated!' : 'プロフィールを更新しました！');
   };
 
   const handleLogout = async () => {
@@ -402,7 +543,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         onOpenListing={() => setIsListingOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenChat={() => setIsChatOpen(true)}
-        onOpenProfile={() => handleOpenProfile('user-sakura')}
+        onOpenProfile={() => handleOpenProfile('user-me')}
         onLogout={handleLogout}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -512,6 +653,8 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
                     item={item}
                     locale={locale}
                     onSelect={(selected) => setSelectedItem(selected)}
+                    onToggleLike={handleToggleLikeItem}
+                    onOpenProfile={handleOpenProfile}
                   />
                 ))}
               </div>
@@ -558,10 +701,13 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       {currentTab === 'community' && (
         <CommunityFeed
           posts={posts}
+          comments={postComments}
           locale={locale}
           onOpenProfile={handleOpenProfile}
           onOpenAuth={() => setIsAuthOpen(true)}
           onAddPost={handleAddPost}
+          onToggleLikePost={handleToggleLikePost}
+          onAddPostComment={handleAddPostComment}
         />
       )}
 
@@ -583,6 +729,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       <ItemModal
         item={selectedItem}
         locale={locale}
+        comments={selectedItem ? (itemComments[selectedItem.id] || []) : []}
         onClose={() => setSelectedItem(null)}
         onRequestClaim={(item) => {
           setSelectedItem(null);
@@ -593,6 +740,8 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           setSelectedItem(null);
           handleStartChat(userId, name, avatar, itm);
         }}
+        onToggleLike={handleToggleLikeItem}
+        onAddComment={handleAddItemComment}
       />
 
       <ClaimModal
@@ -626,6 +775,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           items={items}
           posts={posts}
           locale={locale}
+          isMyProfile={activeProfile.id === 'user-me' || activeProfile.id === (currentUser?.id || '')}
           onClose={() => setActiveProfile(null)}
           onStartChat={(uid, uname, uavatar) => {
             setActiveProfile(null);
@@ -635,6 +785,8 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             setActiveProfile(null);
             setSelectedItem(itm);
           }}
+          onToggleLikeItem={handleToggleLikeItem}
+          onUpdateProfile={handleUpdateProfile}
         />
       )}
 
@@ -663,10 +815,18 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         onSelectTab={setCurrentTab}
         onOpenListing={() => setIsListingOpen(true)}
         onOpenChat={() => setIsChatOpen(true)}
-        onOpenProfile={() => handleOpenProfile('user-sakura')}
+        onOpenProfile={() => handleOpenProfile('user-me')}
       />
 
       <PwaInstallPrompt locale={locale} />
+
+      {/* Floating Action Feedback Toast */}
+      {toastMessage && (
+        <div className="fixed top-18 right-4 z-50 bg-gray-900/95 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 border border-white/10 animate-fadeIn">
+          <span className="text-pink-400">✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
     </div>
   );

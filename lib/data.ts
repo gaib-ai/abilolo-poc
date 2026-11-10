@@ -1,4 +1,4 @@
-import { Item, CategoryInfo, UserProfile, CommunityPost, ChatRoom, ChatMessage } from './types';
+import { Item, CategoryInfo, UserProfile, CommunityPost, ChatRoom, ChatMessage, ItemComment, PostComment } from './types';
 
 export const CATEGORIES: CategoryInfo[] = [
   {
@@ -61,6 +61,23 @@ export const TOKYO_LOCATIONS = [
 ];
 
 export const DEMO_PROFILES: Record<string, UserProfile> = {
+  'user-me': {
+    id: 'user-me',
+    username: 'my_family',
+    displayName: 'あなた (マイアカウント) 🌸',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    bio: '都内在住・1歳のお子さんを子育て中。使わなくなったアイテムを大切に次のパパ・ママへお譲りしています✨',
+    neighborhood: '東京都新宿区 (西新宿)',
+    prefecture: '東京都',
+    babyStages: ['1-2歳 (よちよち期)'],
+    followerCount: 54,
+    followingCount: 38,
+    isFollowing: false,
+    listedCount: 2,
+    givenCount: 1,
+    badges: ['認証パパ/ママ', 'ルーキーギバー'],
+    createdAt: '2026-10-01'
+  },
   'user-sakura': {
     id: 'user-sakura',
     username: 'sakura_mom',
@@ -139,7 +156,9 @@ export const INITIAL_ITEMS: Item[] = [
     createdAt: '2026-10-25',
     status: 'available',
     views: 142,
-    likes: 18
+    likes: 18,
+    isLiked: false,
+    commentCount: 3
   },
   {
     id: 'item-2',
@@ -164,7 +183,9 @@ export const INITIAL_ITEMS: Item[] = [
     createdAt: '2026-10-24',
     status: 'available',
     views: 205,
-    likes: 27
+    likes: 27,
+    isLiked: true,
+    commentCount: 2
   },
   {
     id: 'item-3',
@@ -189,7 +210,9 @@ export const INITIAL_ITEMS: Item[] = [
     createdAt: '2026-10-23',
     status: 'available',
     views: 89,
-    likes: 12
+    likes: 12,
+    isLiked: false,
+    commentCount: 0
   },
   {
     id: 'item-4',
@@ -214,7 +237,9 @@ export const INITIAL_ITEMS: Item[] = [
     createdAt: '2026-10-22',
     status: 'available',
     views: 310,
-    likes: 45
+    likes: 45,
+    isLiked: false,
+    commentCount: 1
   },
   {
     id: 'item-5',
@@ -244,7 +269,9 @@ export const INITIAL_ITEMS: Item[] = [
       claimedAt: '2026-10-23'
     },
     views: 180,
-    likes: 15
+    likes: 15,
+    isLiked: false,
+    commentCount: 0
   },
   {
     id: 'item-6',
@@ -269,7 +296,9 @@ export const INITIAL_ITEMS: Item[] = [
     createdAt: '2026-10-20',
     status: 'available',
     views: 94,
-    likes: 9
+    likes: 9,
+    isLiked: false,
+    commentCount: 0
   }
 ];
 
@@ -415,6 +444,92 @@ export const DEMO_CHAT_MESSAGES: Record<string, ChatMessage[]> = {
       content: 'お譲り希望ありがとうございます！安全ベルトも同梱しています。',
       createdAt: '昨日 15:30',
       isMine: false
+    }
+  ]
+};
+
+export const DEMO_ITEM_COMMENTS: Record<string, ItemComment[]> = {
+  'item-1': [
+    {
+      id: 'ic-1',
+      itemId: 'item-1',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'こんにちは！シートカバーは取り外して自宅で丸洗い可能なタイプでしょうか？',
+      createdAt: '昨日 14:20'
+    },
+    {
+      id: 'ic-2',
+      itemId: 'item-1',
+      authorId: 'user-sakura',
+      authorName: 'さくらママ 🌸',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: 'Ken_Dadさん、ご質問ありがとうございます！はい、エッグショックパッドを含めすべて取り外してネット洗濯可能です。直前に一度無添加洗剤でクリーニング済みです✨',
+      createdAt: '昨日 14:45'
+    },
+    {
+      id: 'ic-3',
+      itemId: 'item-1',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '折りたたみ時の片手ワンタッチ開閉はスムーズに動きますか？',
+      createdAt: '今日 09:10'
+    }
+  ],
+  'item-2': [
+    {
+      id: 'ic-4',
+      itemId: 'item-2',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '日本正規品のベビーウエストベルトも付いていますか？',
+      createdAt: '2日前'
+    },
+    {
+      id: 'ic-5',
+      itemId: 'item-2',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'はい！日本正規品のウエスト安全ベルトと付属ポーチもそのまま完備してお送りします👍',
+      createdAt: '2日前'
+    }
+  ]
+};
+
+export const DEMO_POST_COMMENTS: Record<string, PostComment[]> = {
+  'post-1': [
+    {
+      id: 'pc-1',
+      postId: 'post-1',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: 'スクスク愛用してます！かかとが硬めでしっかりホールドしてくれるので本当におすすめですよね👟',
+      createdAt: '2日前'
+    },
+    {
+      id: 'pc-2',
+      postId: 'post-1',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'ニューバランスの996もマジックテープが大きく開いて履かせやすくておすすめですよ〜！',
+      createdAt: '昨日 18:30'
+    }
+  ],
+  'post-2': [
+    {
+      id: 'pc-3',
+      postId: 'post-2',
+      authorId: 'user-sakura',
+      authorName: 'さくらママ 🌸',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: 'うちも来月あたりリベルを手放す予定です！もしお急ぎでなければお声がけしますね😊',
+      createdAt: '昨日 11:15'
     }
   ]
 };
