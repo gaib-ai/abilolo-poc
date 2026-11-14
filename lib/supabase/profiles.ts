@@ -1,4 +1,5 @@
 import { UserProfile } from '../types';
+import { DEFAULT_AVATAR_URL } from '../data';
 import { getSupabaseBrowserClient } from './client';
 
 export async function fetchUserProfileFromSupabase(userId: string): Promise<UserProfile | null> {
@@ -23,7 +24,7 @@ export async function fetchUserProfileFromSupabase(userId: string): Promise<User
       id: data.id,
       username: data.username || `user_${data.id.slice(0, 6)}`,
       displayName: data.display_name || '子育てユーザー',
-      avatarUrl: data.avatar_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      avatarUrl: data.avatar_url || DEFAULT_AVATAR_URL,
       bio: data.bio || '子ども用品を気持ちよく譲り合いたいママ/パパです。',
       neighborhood: data.neighborhood || '東京都新宿区',
       prefecture: data.prefecture || '東京都',

@@ -175,11 +175,11 @@ export const MapView: React.FC<MapViewProps> = ({
       <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2 max-w-xl mx-auto pointer-events-none">
         
         {/* Filter Pills (Items vs Posts) */}
-        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-1">
+        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between pointer-events-auto overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 filterType === 'all'
                   ? 'bg-gray-900 text-white shadow-xs'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -189,7 +189,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </button>
             <button
               onClick={() => setFilterType('items')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${
                 filterType === 'items'
                   ? 'bg-pink-500 text-white shadow-xs'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -200,7 +200,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </button>
             <button
               onClick={() => setFilterType('posts')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${
                 filterType === 'posts'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -211,7 +211,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </button>
           </div>
 
-          <div className="text-[10px] text-gray-400 font-bold px-2 hidden sm:block">
+          <div className="text-[10px] text-gray-400 font-bold px-2 hidden sm:block whitespace-nowrap shrink-0">
             {items.length + posts.length} 地点のピン
           </div>
         </div>
@@ -220,7 +220,7 @@ export const MapView: React.FC<MapViewProps> = ({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pointer-events-auto">
           <button
             onClick={() => handleFlyToArea('all')}
-            className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition-all shadow-xs ${
+            className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap transition-all shadow-xs ${
               selectedArea === 'all'
                 ? 'bg-pink-600 text-white border border-pink-700'
                 : 'bg-white/90 backdrop-blur-md text-gray-700 hover:bg-white border border-gray-200'
@@ -232,7 +232,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <button
               key={loc.name}
               onClick={() => handleFlyToArea(loc.name, loc.lat, loc.lng)}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition-all shadow-xs ${
+              className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap transition-all shadow-xs ${
                 selectedArea === loc.name
                   ? 'bg-pink-600 text-white border border-pink-700'
                   : 'bg-white/90 backdrop-blur-md text-gray-700 hover:bg-white border border-gray-200'
@@ -249,8 +249,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Bottom Preview Drawer: Selected Item */}
       {activeItem && (
-        <div className="absolute bottom-6 left-4 right-4 z-20 max-w-lg mx-auto animate-slideUp">
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-pink-100 flex items-center gap-4 relative">
+        <div className="absolute bottom-20 md:bottom-6 left-3 right-3 sm:left-4 sm:right-4 z-20 max-w-lg mx-auto animate-slideUp">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3 sm:p-4 shadow-2xl border border-pink-100 flex items-center gap-3 sm:gap-4 relative">
             <button
               onClick={() => setActiveItem(null)}
               className="absolute -top-3 -right-2 w-7 h-7 rounded-full bg-gray-800 text-white flex items-center justify-center shadow-md hover:bg-black transition-colors"
@@ -260,12 +260,12 @@ export const MapView: React.FC<MapViewProps> = ({
             <img
               src={activeItem.images[0]}
               alt={activeItem.title}
-              className="w-20 h-20 rounded-2xl object-cover shrink-0 border border-gray-100 shadow-sm cursor-pointer"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 border border-gray-100 shadow-sm cursor-pointer"
               onClick={() => onSelectItem(activeItem)}
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
                   ¥0 お譲り
                 </span>
                 <span className="text-[10px] text-gray-400 truncate">
@@ -284,16 +284,16 @@ export const MapView: React.FC<MapViewProps> = ({
               <div className="flex items-center gap-2 mt-2">
                 <button
                   onClick={() => onSelectItem(activeItem)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black bg-pink-50 text-pink-700 hover:bg-pink-100 border border-pink-200 transition-all active:scale-95 flex items-center gap-1"
+                  className="flex-1 min-w-0 py-1.5 px-2 rounded-xl text-xs font-black bg-pink-50 text-pink-700 hover:bg-pink-100 border border-pink-200 transition-all active:scale-95 flex items-center justify-center gap-1 whitespace-nowrap"
                 >
-                  詳細を見る
-                  <ChevronRight className="w-3 h-3" />
+                  <span>{locale === 'en' ? 'Details' : '詳細を見る'}</span>
+                  <ChevronRight className="w-3 h-3 shrink-0" />
                 </button>
                 <button
                   onClick={() => onStartChat(activeItem.giverId || 'user-sakura', activeItem.giverName, activeItem.giverAvatar || '')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-xs hover:opacity-95 transition-all active:scale-95"
+                  className="flex-1 min-w-0 py-1.5 px-2 rounded-xl text-xs font-black bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-xs hover:opacity-95 transition-all active:scale-95 text-center whitespace-nowrap"
                 >
-                  チャットで相談
+                  {locale === 'en' ? 'Chat' : 'チャットで相談'}
                 </button>
               </div>
             </div>
@@ -303,8 +303,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Bottom Preview Drawer: Selected Post */}
       {activePost && (
-        <div className="absolute bottom-6 left-4 right-4 z-20 max-w-lg mx-auto animate-slideUp">
-          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-emerald-100 relative">
+        <div className="absolute bottom-20 md:bottom-6 left-3 right-3 sm:left-4 sm:right-4 z-20 max-w-lg mx-auto animate-slideUp">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3 sm:p-4 shadow-2xl border border-emerald-100 relative">
             <button
               onClick={() => setActivePost(null)}
               className="absolute -top-3 -right-2 w-7 h-7 rounded-full bg-gray-800 text-white flex items-center justify-center shadow-md hover:bg-black transition-colors"
@@ -340,10 +340,10 @@ export const MapView: React.FC<MapViewProps> = ({
               <span className="text-gray-400 text-[11px]">❤️ {activePost.likes} いいね</span>
               <button
                 onClick={() => onOpenProfile(activePost.userId)}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 whitespace-nowrap"
               >
-                プロフィールを見る
-                <ChevronRight className="w-3.5 h-3.5" />
+                <span>{locale === 'en' ? 'View Profile' : 'プロフィールを見る'}</span>
+                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
               </button>
             </div>
           </div>

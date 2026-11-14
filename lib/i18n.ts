@@ -82,7 +82,7 @@ export const DICTIONARY = {
 
     // V1 Navigation & Feature Strings
     tabMarket: 'お譲り品',
-    tabMap: '近所マップ',
+    tabMap: 'マップ',
     tabCommunity: 'コミュニティ',
     tabChat: 'チャット',
     tabProfile: 'マイページ',
@@ -227,9 +227,9 @@ export const DICTIONARY = {
 
     // V1 Navigation & Feature Strings
     tabMarket: 'Market',
-    tabMap: 'Nearby Map',
+    tabMap: 'Map',
     tabCommunity: 'Community',
-    tabChat: 'Messages',
+    tabChat: 'Chat',
     tabProfile: 'Profile',
     messageGiverBtn: 'Message Giver on Chat',
     viewProfileBtn: 'View Profile',

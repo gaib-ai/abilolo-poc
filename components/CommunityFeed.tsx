@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { CommunityPost, PostComment } from '@/lib/types';
 import { Locale, DICTIONARY } from '@/lib/i18n';
-import { TOKYO_LOCATIONS } from '@/lib/data';
+import { TOKYO_LOCATIONS, DEFAULT_AVATAR_URL } from '@/lib/data';
 import { Heart, MessageCircle, MapPin, Plus, Share2, Sparkles, X, Image as ImageIcon, Send, Check } from 'lucide-react';
 
 interface CommunityFeedProps {
@@ -88,7 +88,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
     onAddPost({
       userId: 'user-me',
       authorName: 'あなた (マイアカウント)',
-      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      authorAvatar: DEFAULT_AVATAR_URL,
       authorNeighborhood: `東京都${neighborhood}`,
       content: content.trim(),
       images: imageUrl ? [imageUrl] : [],

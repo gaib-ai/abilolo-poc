@@ -75,9 +75,9 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-40 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
       <div 
-        className="bg-white rounded-3xl max-w-2xl w-full h-[90vh] sm:h-[82vh] shadow-2xl border border-gray-100 flex flex-col overflow-hidden relative"
+        className="bg-white w-full h-full md:max-w-2xl md:h-[82vh] md:rounded-3xl md:shadow-2xl md:border md:border-gray-100 flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Main Content: Split or Full Screen depending on active room selection */}

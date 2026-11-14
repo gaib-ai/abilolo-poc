@@ -1,4 +1,5 @@
 import { ChatRoom, ChatMessage } from '../types';
+import { DEFAULT_AVATAR_URL } from '../data';
 import { getSupabaseBrowserClient } from './client';
 
 export async function fetchChatRoomsFromSupabase(): Promise<ChatRoom[] | null> {
@@ -23,7 +24,7 @@ export async function fetchChatRoomsFromSupabase(): Promise<ChatRoom[] | null> {
       participant: {
         id: row.participant_id,
         name: row.participant_name,
-        avatar: row.participant_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        avatar: row.participant_avatar || DEFAULT_AVATAR_URL,
         neighborhood: row.participant_neighborhood || '東京都新宿区'
       },
       itemId: row.item_id,

@@ -60,12 +60,14 @@ export const TOKYO_LOCATIONS = [
   { name: '品川区 (大崎・五反田)', lat: 35.6092, lng: 139.7303 }
 ];
 
+export const DEFAULT_AVATAR_URL = '/empty-avatar.svg';
+
 export const DEMO_PROFILES: Record<string, UserProfile> = {
   'user-me': {
     id: 'user-me',
     username: 'my_family',
     displayName: 'あなた (マイアカウント) 🌸',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    avatarUrl: DEFAULT_AVATAR_URL,
     bio: '都内在住・1歳のお子さんを子育て中。使わなくなったアイテムを大切に次のパパ・ママへお譲りしています✨',
     neighborhood: '東京都新宿区 (西新宿)',
     prefecture: '東京都',
