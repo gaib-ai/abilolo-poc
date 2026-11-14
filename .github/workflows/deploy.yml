@@ -9,6 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.repository == 'Abilolo-dev/abilolo' && secrets.VERCEL_TOKEN != ''
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
