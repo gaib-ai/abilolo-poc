@@ -134,7 +134,19 @@ export const DICTIONARY = {
     profileEmptyPosts: 'まだ投稿はありません',
     profileEmptyLiked: 'まだいいねしたアイテムはありません',
     shareBtn: 'シェア',
-    copiedToClipboard: 'リンクをコピーしました'
+    copiedToClipboard: 'リンクをコピーしました',
+    authGateTitleMessages: 'ログインしてメッセージを利用する',
+    authGateDescMessages: 'Abiloloのお譲り品や地域マップ、掲示板の閲覧はログインなしで自由にお楽しみいただけます。出品者への問い合わせや直接メッセージのやり取りにはログインが必要です。',
+    authGateTitleProfile: 'ログインしてマイページを利用する',
+    authGateDescProfile: 'マイページでは、ご自身のお譲り出品、マッチング成立履歴、いいねしたお気に入りアイテム、子育て掲示板の投稿履歴を一元管理できます。アカウントにログインしてご利用ください。',
+    authGateLoginBtn: 'ログイン / 新規登録 (無料)',
+    authGateBrowseBtn: '閲覧を続ける',
+    authGateBenefit1Messages: '1対1の安全なダイレクトメッセージ',
+    authGateBenefit2Messages: '受け渡し場所や発送日程のスムーズな相談',
+    authGateBenefit3Messages: '新着メッセージのリアルタイム通知',
+    authGateBenefit1Profile: '出品したアイテムとお譲り成立履歴の管理',
+    authGateBenefit2Profile: '気に入ったお譲り品のお気に入り保存',
+    authGateBenefit3Profile: 'コミュニティ掲示板の投稿・返信管理'
   },
   en: {
     siteTitle: 'Abilolo',
@@ -267,7 +279,19 @@ export const DICTIONARY = {
     profileEmptyPosts: 'No posts yet',
     profileEmptyLiked: 'No liked items yet',
     shareBtn: 'Share',
-    copiedToClipboard: 'Link copied to clipboard'
+    copiedToClipboard: 'Link copied to clipboard',
+    authGateTitleMessages: 'Log in to use Messages',
+    authGateDescMessages: 'You can freely browse listings, the area map, and community boards without logging in. To chat directly with families or inquire about items, please log in.',
+    authGateTitleProfile: 'Log in to access My Page',
+    authGateDescProfile: 'Your personal My Page allows you to manage your listings, matched items, saved favorites, and community posts. Please log in to continue.',
+    authGateLoginBtn: 'Log in / Sign up (Free)',
+    authGateBrowseBtn: 'Continue Browsing',
+    authGateBenefit1Messages: 'Secure 1-on-1 direct messaging',
+    authGateBenefit2Messages: 'Seamless pickup & shipping coordination',
+    authGateBenefit3Messages: 'Real-time alerts for incoming replies',
+    authGateBenefit1Profile: 'Manage your listings & matched items',
+    authGateBenefit2Profile: 'Keep track of your bookmarked favorites',
+    authGateBenefit3Profile: 'View and manage your community discussions'
   }
 };
 

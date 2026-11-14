@@ -17,7 +17,8 @@ import {
   Bookmark,
   Share2,
   Calendar,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react';
 
 interface ProfileModalProps {
@@ -31,6 +32,7 @@ interface ProfileModalProps {
   onSelectItem: (item: Item) => void;
   onToggleLikeItem?: (itemId: string) => void;
   onUpdateProfile?: (updated: Partial<UserProfile>) => void;
+  onShowToast?: (msg: string) => void;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -43,7 +45,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onStartChat,
   onSelectItem,
   onToggleLikeItem,
-  onUpdateProfile
+  onUpdateProfile,
+  onShowToast
 }) => {
   const t = DICTIONARY[locale];
   const [activeTab, setActiveTab] = useState<'listings' | 'posts' | 'liked'>('listings');
@@ -63,8 +66,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     (item) =>
       (item.giverId && item.giverId === profile.id) ||
       (profile.id === 'user-me' && (item.giverId === 'user-me' || item.giverName.includes('あなた'))) ||
-      item.giverName.toLowerCase().includes(profile.displayName.slice(0, 3).toLowerCase())
+      (profile.displayName && item.giverName.toLowerCase() === profile.displayName.toLowerCase())
   );
+
+  const matchedCount = userItems.filter((item) => item.status === 'claimed').length;
 
   const filteredUserItems = userItems.filter((item) => {
     if (listingFilter === 'all') return true;
@@ -76,7 +81,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     (post) =>
       post.userId === profile.id ||
       (profile.id === 'user-me' && (post.userId === 'user-me' || post.authorName.includes('あなた'))) ||
-      post.authorName.toLowerCase().includes(profile.displayName.slice(0, 3).toLowerCase())
+      (profile.displayName && post.authorName.toLowerCase() === profile.displayName.toLowerCase())
   );
 
   // Items liked by the user
@@ -106,6 +111,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(`${window.location.origin}/#profile-${profile.username}`);
       setCopiedLink(true);
+      onShowToast?.(t.copiedToClipboard);
       setTimeout(() => setCopiedLink(false), 2000);
     }
   };
@@ -132,14 +138,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <button
               onClick={handleShareProfile}
               title={t.shareBtn}
-              className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors text-xs flex items-center gap-1"
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors flex items-center justify-center shrink-0"
+              aria-label={t.shareBtn}
             >
-              <Share2 className="w-4 h-4" />
-              {copiedLink && <span className="text-[10px] font-bold text-pink-600">{t.copiedToClipboard}</span>}
+              {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors shrink-0"
+              aria-label="Close"
             >
               <X className="w-4 h-4" />
             </button>
@@ -173,7 +180,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <>
                     <button
                       onClick={handleToggleFollow}
-                      className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 ${
+                      className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95 min-w-[96px] ${
                         isFollowing
                           ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           : 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-pink-500/25 hover:opacity-95'
@@ -259,7 +266,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <div className="text-[10px] text-gray-500 font-bold">{t.profileTabListings}</div>
               </div>
               <div>
-                <div className="text-base font-black text-emerald-600">{profile.givenCount}</div>
+                <div className="text-base font-black text-emerald-600">{isMyProfile ? matchedCount : profile.givenCount}</div>
                 <div className="text-[10px] text-gray-500 font-bold">{locale === 'en' ? 'Matched' : '成立数'}</div>
               </div>
               <div>

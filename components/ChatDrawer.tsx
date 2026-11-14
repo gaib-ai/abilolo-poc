@@ -29,17 +29,17 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   onOpenProfile
 }) => {
   const t = DICTIONARY[locale];
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(activeRoomId || (rooms.length > 0 ? rooms[0].id : null));
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(activeRoomId || null);
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Only sync when activeRoomId prop explicitly updates
   useEffect(() => {
     if (activeRoomId) {
       setSelectedRoomId(activeRoomId);
-    } else if (!selectedRoomId && rooms.length > 0) {
-      setSelectedRoomId(rooms[0].id);
     }
-  }, [activeRoomId, rooms, selectedRoomId]);
+  }, [activeRoomId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,15 +47,31 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const currentRoom = rooms.find((r) => r.id === selectedRoomId) || (rooms.length > 0 ? rooms[0] : null);
+  const currentRoom = rooms.find((r) => r.id === selectedRoomId) || null;
   const effectiveRoomId = currentRoom?.id || null;
   const currentMessages = effectiveRoomId && messages[effectiveRoomId] ? messages[effectiveRoomId] : [];
 
+  // Deduplicate messages by ID to prevent rendering twins
+  const uniqueMessages = (() => {
+    const seen = new Set<string>();
+    const list: ChatMessage[] = [];
+    for (const m of currentMessages) {
+      if (!seen.has(m.id)) {
+        seen.add(m.id);
+        list.push(m);
+      }
+    }
+    return list;
+  })();
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !effectiveRoomId) return;
-    onSendMessage(effectiveRoomId, inputText.trim());
+    const text = inputText.trim();
+    if (!text || !effectiveRoomId || isSending) return;
+    setIsSending(true);
     setInputText('');
+    onSendMessage(effectiveRoomId, text);
+    setTimeout(() => setIsSending(false), 400);
   };
 
   return (
@@ -72,12 +88,23 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             {/* Sidebar Header */}
             <div className="p-4 bg-white border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-pink-500" />
-                <h3 className="font-black text-gray-900 text-sm">{t.chatDrawerTitle}</h3>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  aria-label="Close"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="w-5 h-5 text-pink-500" />
+                  <h3 className="font-black text-gray-900 text-sm">{t.chatDrawerTitle}</h3>
+                </div>
               </div>
               <button
                 onClick={onClose}
-                className="md:hidden w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200"
+                aria-label="Close"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -142,8 +169,13 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
               <div className="p-3.5 px-4 bg-white border-b border-gray-100 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setSelectedRoomId(null)}
-                    className="md:hidden w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200"
+                    type="button"
+                    onClick={() => {
+                      setSelectedRoomId(null);
+                      onSelectRoom?.('');
+                    }}
+                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+                    aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
@@ -208,7 +240,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                   </span>
                 </div>
 
-                {currentMessages.map((msg) => (
+                {uniqueMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex items-end gap-2 ${

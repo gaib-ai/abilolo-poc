@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { CommunityPost, PostComment } from '@/lib/types';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 import { TOKYO_LOCATIONS } from '@/lib/data';
-import { Heart, MessageCircle, MapPin, Plus, Share2, Sparkles, X, Image as ImageIcon, Send } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Plus, Share2, Sparkles, X, Image as ImageIcon, Send, Check } from 'lucide-react';
 
 interface CommunityFeedProps {
   posts: CommunityPost[];
@@ -15,6 +15,7 @@ interface CommunityFeedProps {
   onAddPost: (post: Omit<CommunityPost, 'id' | 'likes' | 'commentCount' | 'createdAt'>) => void;
   onToggleLikePost?: (postId: string) => void;
   onAddPostComment?: (postId: string, content: string) => void;
+  onShowToast?: (msg: string) => void;
 }
 
 export const CommunityFeed: React.FC<CommunityFeedProps> = ({
@@ -25,7 +26,8 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   onOpenAuth,
   onAddPost,
   onToggleLikePost,
-  onAddPostComment
+  onAddPostComment,
+  onShowToast
 }) => {
   const t = DICTIONARY[locale];
   const [filter, setFilter] = useState<'all' | 'tip' | 'request'>('all');
@@ -50,9 +52,10 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   };
 
   const handleShare = (postId: string) => {
-    if (navigator.clipboard) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(`${window.location.origin}/#post-${postId}`);
       setCopiedPostId(postId);
+      onShowToast?.(t.copiedToClipboard);
       setTimeout(() => setCopiedPostId(null), 2000);
     }
   };
@@ -67,6 +70,14 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
     if (filter === 'all') return true;
     return p.category === filter;
   });
+
+  const getPostComments = (postId: string): PostComment[] => {
+    if (comments[postId] && comments[postId].length > 0) return comments[postId];
+    if (postId === 'a0000000-0000-0000-0000-000000000001') return comments['post-1'] || [];
+    if (postId === 'a0000000-0000-0000-0000-000000000002') return comments['post-2'] || [];
+    if (postId === 'a0000000-0000-0000-0000-000000000003') return comments['post-3'] || [];
+    return [];
+  };
 
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,92 +218,110 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               </div>
             )}
 
-            {/* Actions (Like, Comment, Share) */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-xs text-gray-500">
+            {/* Actions (Like, Comment, Share) - Locked 3-column grid so layout never alters on click */}
+            <div className="grid grid-cols-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
               <button
                 type="button"
                 onClick={() => onToggleLikePost?.(post.id)}
-                className={`flex items-center gap-1.5 transition-all active:scale-110 ${
-                  post.isLiked ? 'text-pink-600 font-bold' : 'hover:text-pink-600'
+                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-xl transition-all active:scale-105 ${
+                  post.isLiked ? 'text-pink-600 font-bold bg-pink-50/40' : 'hover:text-pink-600 hover:bg-gray-50'
                 }`}
               >
-                <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-pink-600 text-pink-600' : ''}`} />
-                <span>{post.likes}</span>
+                <Heart className={`w-4 h-4 shrink-0 ${post.isLiked ? 'fill-pink-600 text-pink-600' : ''}`} />
+                <span className="tabular-nums">{post.likes}</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => toggleComments(post.id)}
-                className={`flex items-center gap-1.5 transition-colors ${
-                  expandedComments[post.id] ? 'text-pink-600 font-bold' : 'hover:text-gray-700'
+                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-xl transition-colors ${
+                  expandedComments[post.id] ? 'text-pink-600 font-bold bg-pink-50/40' : 'hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>{post.commentCount} {t.postCommentsCount}</span>
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span className="tabular-nums">
+                  {getPostComments(post.id).length > 0 ? getPostComments(post.id).length : post.commentCount}{' '}
+                  {t.postCommentsCount}
+                </span>
               </button>
+
               <button
                 type="button"
                 onClick={() => handleShare(post.id)}
-                className="flex items-center gap-1 hover:text-gray-700 transition-colors relative"
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded-xl hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                title={t.shareBtn}
               >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>{copiedPostId === post.id ? t.copiedToClipboard : t.shareBtn}</span>
+                {copiedPostId === post.id ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-emerald-600 font-bold">{locale === 'en' ? 'Copied' : 'コピー済'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>{t.shareBtn}</span>
+                  </>
+                )}
               </button>
             </div>
 
             {/* Expandable Comments Section */}
-            {expandedComments[post.id] && (
-              <div className="mt-3 pt-3 border-t border-gray-50 space-y-3 animate-fadeIn">
-                {/* Existing comments */}
-                {(comments[post.id] || []).length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {(comments[post.id] || []).map((c) => (
-                      <div key={c.id} className="bg-gray-50 rounded-xl p-2.5 text-xs space-y-1">
-                        <div className="flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => onOpenProfile(c.authorId)}
-                            className="flex items-center gap-1.5 font-bold text-gray-800 hover:text-pink-600 transition-colors"
-                          >
-                            <img src={c.authorAvatar} alt={c.authorName} className="w-4 h-4 rounded-full object-cover" />
-                            <span>{c.authorName}</span>
-                          </button>
-                          <span className="text-[10px] text-gray-400">{c.createdAt}</span>
+            {expandedComments[post.id] && (() => {
+              const currentPostComments = getPostComments(post.id);
+              return (
+                <div className="mt-3 pt-3 border-t border-gray-50 space-y-3 animate-fadeIn">
+                  {/* Existing comments */}
+                  {currentPostComments.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {currentPostComments.map((c) => (
+                        <div key={c.id} className="bg-gray-50 rounded-xl p-2.5 text-xs space-y-1">
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => onOpenProfile(c.authorId)}
+                              className="flex items-center gap-1.5 font-bold text-gray-800 hover:text-pink-600 transition-colors"
+                            >
+                              <img src={c.authorAvatar} alt={c.authorName} className="w-4 h-4 rounded-full object-cover" />
+                              <span>{c.authorName}</span>
+                            </button>
+                            <span className="text-[10px] text-gray-400">{c.createdAt}</span>
+                          </div>
+                          <p className="text-gray-700 leading-relaxed pl-5.5">{c.content}</p>
                         </div>
-                        <p className="text-gray-700 leading-relaxed pl-5.5">{c.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-gray-400 text-center py-2 bg-gray-50 rounded-xl">
-                    {locale === 'en' ? 'No replies yet. Start the conversation!' : 'まだ返信はありません。最初のコメントを投稿してみましょう！'}
-                  </p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 text-center py-2 bg-gray-50 rounded-xl">
+                      {locale === 'en' ? 'No replies yet. Start the conversation!' : 'まだ返信はありません。最初のコメントを投稿してみましょう！'}
+                    </p>
+                  )}
 
-                {/* Comment input form */}
-                <form onSubmit={(e) => handlePostCommentSubmit(post.id, e)} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={commentInputs[post.id] || ''}
-                    onChange={(e) =>
-                      setCommentInputs((prev) => ({
-                        ...prev,
-                        [post.id]: e.target.value
-                      }))
-                    }
-                    placeholder={t.postCommentPlaceholder}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-800"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!(commentInputs[post.id] || '').trim()}
-                    className="px-3.5 py-1.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>{t.postCommentSubmit}</span>
-                  </button>
-                </form>
-              </div>
-            )}
+                  {/* Comment input form */}
+                  <form onSubmit={(e) => handlePostCommentSubmit(post.id, e)} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={commentInputs[post.id] || ''}
+                      onChange={(e) =>
+                        setCommentInputs((prev) => ({
+                          ...prev,
+                          [post.id]: e.target.value
+                        }))
+                      }
+                      placeholder={t.postCommentPlaceholder}
+                      className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-800"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!(commentInputs[post.id] || '').trim()}
+                      className="px-3.5 py-1.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>{t.postCommentSubmit}</span>
+                    </button>
+                  </form>
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>

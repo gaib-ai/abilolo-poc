@@ -319,7 +319,7 @@ export const DEMO_POSTS: CommunityPost[] = [
     longitude: 139.7034,
     likes: 24,
     isLiked: false,
-    commentCount: 7,
+    commentCount: 2,
     createdAt: '2026-11-04'
   },
   {
@@ -336,7 +336,7 @@ export const DEMO_POSTS: CommunityPost[] = [
     longitude: 139.7016,
     likes: 15,
     isLiked: true,
-    commentCount: 4,
+    commentCount: 2,
     createdAt: '2026-11-03'
   },
   {
@@ -355,7 +355,7 @@ export const DEMO_POSTS: CommunityPost[] = [
     longitude: 139.6533,
     likes: 38,
     isLiked: false,
-    commentCount: 11,
+    commentCount: 3,
     createdAt: '2026-11-02'
   }
 ];
@@ -521,6 +521,26 @@ export const DEMO_POST_COMMENTS: Record<string, PostComment[]> = {
       createdAt: '昨日 18:30'
     }
   ],
+  'a0000000-0000-0000-0000-000000000001': [
+    {
+      id: 'pc-1',
+      postId: 'a0000000-0000-0000-0000-000000000001',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: 'スクスク愛用してます！かかとが硬めでしっかりホールドしてくれるので本当におすすめですよね👟',
+      createdAt: '2日前'
+    },
+    {
+      id: 'pc-2',
+      postId: 'a0000000-0000-0000-0000-000000000001',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'ニューバランスの996もマジックテープが大きく開いて履かせやすくておすすめですよ〜！',
+      createdAt: '昨日 18:30'
+    }
+  ],
   'post-2': [
     {
       id: 'pc-3',
@@ -530,6 +550,93 @@ export const DEMO_POST_COMMENTS: Record<string, PostComment[]> = {
       authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
       content: 'うちも来月あたりリベルを手放す予定です！もしお急ぎでなければお声がけしますね😊',
       createdAt: '昨日 11:15'
+    },
+    {
+      id: 'pc-4',
+      postId: 'post-2',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '代々木公園周辺なら車ですぐお届けできるかもしれません！状態確認のDM送りますね✨',
+      createdAt: '昨日 14:20'
+    }
+  ],
+  'a0000000-0000-0000-0000-000000000002': [
+    {
+      id: 'pc-3',
+      postId: 'a0000000-0000-0000-0000-000000000002',
+      authorId: 'user-sakura',
+      authorName: 'さくらママ 🌸',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: 'うちも来月あたりリベルを手放す予定です！もしお急ぎでなければお声がけしますね😊',
+      createdAt: '昨日 11:15'
+    },
+    {
+      id: 'pc-4',
+      postId: 'a0000000-0000-0000-0000-000000000002',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '代々木公園周辺なら車ですぐお届けできるかもしれません！状態確認のDM送りますね✨',
+      createdAt: '昨日 14:20'
+    }
+  ],
+  'post-3': [
+    {
+      id: 'pc-5',
+      postId: 'post-3',
+      authorId: 'user-sakura',
+      authorName: 'さくらママ 🌸',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: '世田谷の小児科マップぜひ見たいです！休日診療のあるおすすめ病院も気になります👶',
+      createdAt: '3日前'
+    },
+    {
+      id: 'pc-6',
+      postId: 'post-3',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'ブレンダー冷凍ストックは神ですよね！うちもブラウンのハンドブレンダー毎日フル稼働でした🥕',
+      createdAt: '2日前'
+    },
+    {
+      id: 'pc-7',
+      postId: 'post-3',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '皆さんコメントありがとうございます！小児科マップ、次の休みにまとめて近所マップにピン留め投稿しますね📍✨',
+      createdAt: '昨日 20:45'
+    }
+  ],
+  'a0000000-0000-0000-0000-000000000003': [
+    {
+      id: 'pc-5',
+      postId: 'a0000000-0000-0000-0000-000000000003',
+      authorId: 'user-sakura',
+      authorName: 'さくらママ 🌸',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: '世田谷の小児科マップぜひ見たいです！休日診療のあるおすすめ病院も気になります👶',
+      createdAt: '3日前'
+    },
+    {
+      id: 'pc-6',
+      postId: 'a0000000-0000-0000-0000-000000000003',
+      authorId: 'user-ken',
+      authorName: 'Ken_Dad 🍼',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'ブレンダー冷凍ストックは神ですよね！うちもブラウンのハンドブレンダー毎日フル稼働でした🥕',
+      createdAt: '2日前'
+    },
+    {
+      id: 'pc-7',
+      postId: 'a0000000-0000-0000-0000-000000000003',
+      authorId: 'user-haru',
+      authorName: 'HaruMom 🌿',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      content: '皆さんコメントありがとうございます！小児科マップ、次の休みにまとめて近所マップにピン留め投稿しますね📍✨',
+      createdAt: '昨日 20:45'
     }
   ]
 };

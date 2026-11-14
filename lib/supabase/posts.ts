@@ -1,4 +1,4 @@
-import { CommunityPost } from '../types';
+import { CommunityPost, PostComment } from '../types';
 import { getSupabaseBrowserClient } from './client';
 
 export async function fetchCommunityPostsFromSupabase(): Promise<CommunityPost[] | null> {
@@ -91,6 +91,82 @@ export async function insertCommunityPostToSupabase(
     };
   } catch (err) {
     console.error('Failed to insert community post:', err);
+    return null;
+  }
+}
+
+export async function fetchPostCommentsFromSupabase(postId: string): Promise<PostComment[] | null> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.warn('Error fetching post comments:', error);
+      return null;
+    }
+
+    if (!data) return [];
+
+    return (data as Record<string, any>[]).map((row) => ({
+      id: row.id,
+      postId: row.post_id,
+      authorId: row.author_id || 'user-anon',
+      authorName: row.author_name || '子育てユーザー',
+      authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: row.content,
+      createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString([], { month: 'numeric', day: 'numeric' }) : '今'
+    }));
+  } catch (err) {
+    console.error('Failed to fetch post comments:', err);
+    return null;
+  }
+}
+
+export async function insertPostCommentToSupabase(
+  postId: string,
+  content: string,
+  authorId?: string,
+  authorName?: string,
+  authorAvatar?: string
+): Promise<PostComment | null> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({
+        post_id: postId,
+        author_id: authorId && authorId.length === 36 ? authorId : null,
+        author_name: authorName || '子育てユーザー',
+        author_avatar: authorAvatar || null,
+        content
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error inserting post comment to Supabase:', error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      postId: data.post_id,
+      authorId: data.author_id || authorId || 'user-me',
+      authorName: data.author_name,
+      authorAvatar: data.author_avatar || authorAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: data.content,
+      createdAt: '今'
+    };
+  } catch (err) {
+    console.error('Failed to insert post comment:', err);
     return null;
   }
 }

@@ -13,8 +13,14 @@ import {
 } from '@/lib/supabase/items';
 import {
   fetchCommunityPostsFromSupabase,
-  insertCommunityPostToSupabase
+  insertCommunityPostToSupabase,
+  fetchPostCommentsFromSupabase,
+  insertPostCommentToSupabase
 } from '@/lib/supabase/posts';
+import {
+  fetchUserProfileFromSupabase,
+  upsertUserProfileToSupabase
+} from '@/lib/supabase/profiles';
 import {
   fetchChatRoomsFromSupabase,
   fetchChatMessagesFromSupabase,
@@ -27,6 +33,7 @@ import { ItemModal } from '@/components/ItemModal';
 import { ClaimModal } from '@/components/ClaimModal';
 import { ListingModal } from '@/components/ListingModal';
 import { AuthModal } from '@/components/AuthModal';
+import { AuthGateModal } from '@/components/AuthGateModal';
 import { BottomNav } from '@/components/BottomNav';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { ProfileModal } from '@/components/ProfileModal';
@@ -78,8 +85,94 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [activeChatRoomId, setActiveChatRoomId] = useState<string | null>(null);
 
   // Auth state
-  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('abilolo_auth_user');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return null;
+  });
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authGateReason, setAuthGateReason] = useState<'messages' | 'profile' | null>(null);
+  const [pendingGatedAction, setPendingGatedAction] = useState<'messages' | 'profile' | null>(null);
+
+  // Sync / create real user profile synchronously in state + async in Supabase
+  const syncCurrentUserProfile = (user: { id?: string; email?: string }) => {
+    if (!user.id) return;
+    const uid = user.id;
+    const emailPrefix = user.email ? user.email.split('@')[0] : 'user';
+    const cleanUsername = emailPrefix.toLowerCase().replace(/[^a-z0-9_]/g, '_') || `user_${uid.slice(0, 5)}`;
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('abilolo_auth_user', JSON.stringify(user));
+    }
+
+    // 1. Try loading cached profile from localStorage
+    let loaded: UserProfile | null = null;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`abilolo_profile_${uid}`);
+      if (saved) {
+        try {
+          loaded = JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse cached profile:', e);
+        }
+      }
+    }
+
+    // 2. Initialize real profile from user's email
+    if (!loaded) {
+      loaded = {
+        id: uid,
+        username: cleanUsername,
+        displayName: emailPrefix || (locale === 'en' ? 'Parent User' : 'マイアカウント'),
+        avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        bio: locale === 'en'
+          ? 'Sharing outgrown baby & kids supplies with local families in Tokyo!'
+          : '都内在住。使わなくなった子ども用品を大切に次のご家族へ0円でお譲りしています✨',
+        neighborhood: '東京都新宿区',
+        prefecture: '東京都',
+        babyStages: ['0-6ヶ月 (乳児)'],
+        followerCount: 0,
+        followingCount: 0,
+        isFollowing: false,
+        listedCount: 0,
+        givenCount: 0,
+        badges: ['認証アカウント', '登録メンバー'],
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`abilolo_profile_${uid}`, JSON.stringify(loaded));
+      }
+    }
+
+    setProfiles((prev) => ({
+      ...prev,
+      [uid]: loaded!,
+      'user-me': loaded!
+    }));
+
+    // 3. Background remote Supabase sync
+    if (isSupabaseConfigured()) {
+      fetchUserProfileFromSupabase(uid).then((remote) => {
+        if (remote) {
+          setProfiles((prev) => ({
+            ...prev,
+            [uid]: remote,
+            'user-me': remote
+          }));
+        } else {
+          upsertUserProfileToSupabase(uid, loaded!);
+        }
+      });
+    }
+
+    return loaded!;
+  };
 
   // Modals state
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -94,15 +187,22 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         // Auth check
         supabase.auth.getUser().then((res: any) => {
           if (res?.data?.user) {
-            setCurrentUser({ id: res.data.user.id, email: res.data.user.email });
+            const u = { id: res.data.user.id, email: res.data.user.email };
+            setCurrentUser(u);
+            syncCurrentUserProfile(u);
           }
         });
 
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
           if (session?.user) {
-            setCurrentUser({ id: session.user.id, email: session.user.email });
-          } else {
+            const u = { id: session.user.id, email: session.user.email };
+            setCurrentUser(u);
+            syncCurrentUserProfile(u);
+          } else if (event === 'SIGNED_OUT') {
             setCurrentUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('abilolo_auth_user');
+            }
           }
         });
 
@@ -113,10 +213,20 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           }
         });
 
-        // 2. Fetch real community posts from remote Supabase DB
+        // 2. Fetch real community posts from remote Supabase DB & their comments
         fetchCommunityPostsFromSupabase().then((remotePosts) => {
           if (remotePosts && remotePosts.length > 0) {
             setPosts(remotePosts);
+            remotePosts.forEach((p) => {
+              fetchPostCommentsFromSupabase(p.id).then((cList) => {
+                if (cList && cList.length > 0) {
+                  setPostComments((prev) => ({
+                    ...prev,
+                    [p.id]: cList
+                  }));
+                }
+              });
+            });
           }
         });
 
@@ -138,7 +248,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           }
         });
 
-        // 4. Realtime Subscription on chat_messages
+        // 4. Realtime Subscription on chat_messages (with deduplication against optimistic items)
         const realtimeChannel = supabase
           .channel('public:chat_messages')
           .on(
@@ -158,13 +268,31 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
                   isMine: row.sender_id === (currentUser?.id || 'me')
                 };
 
-                setChatMessages((prev) => ({
-                  ...prev,
-                  [row.room_id]: [
-                    ...(prev[row.room_id] || []).filter((m) => m.id !== incomingMsg.id),
-                    incomingMsg
-                  ]
-                }));
+                setChatMessages((prev) => {
+                  const existingList = prev[row.room_id] || [];
+                  // If message already exists by exact real id, do nothing
+                  if (existingList.some((m) => m.id === incomingMsg.id)) {
+                    return prev;
+                  }
+                  // If sent by this user, replace any matching pending optimistic message
+                  if (incomingMsg.isMine) {
+                    const pendingIdx = existingList.findIndex(
+                      (m) => m.id.startsWith('msg-') && m.content === incomingMsg.content
+                    );
+                    if (pendingIdx !== -1) {
+                      const updated = [...existingList];
+                      updated[pendingIdx] = incomingMsg;
+                      return {
+                        ...prev,
+                        [row.room_id]: updated
+                      };
+                    }
+                  }
+                  return {
+                    ...prev,
+                    [row.room_id]: [...existingList, incomingMsg]
+                  };
+                });
               }
             }
           )
@@ -240,27 +368,59 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
 
   // Open profile modal
   const handleOpenProfile = (userId: string) => {
-    const found = profiles[userId] || {
+    // If opening own profile and not logged in, hint user to log in
+    if (userId === 'user-me' || userId === currentUser?.id) {
+      if (!currentUser) {
+        setAuthGateReason('profile');
+        return;
+      }
+      userId = currentUser.id || 'user-me';
+    }
+
+    const emailPrefix = currentUser?.email ? currentUser.email.split('@')[0] : '';
+    const currentProfile = profiles[userId] || {
       id: userId,
-      username: 'user_' + userId.slice(-4),
-      displayName: '子育てユーザー 🌸',
+      username: emailPrefix ? emailPrefix.toLowerCase().replace(/[^a-z0-9_]/g, '_') : 'user_' + userId.slice(-4),
+      displayName: emailPrefix || (locale === 'en' ? 'Parent User' : 'マイアカウント'),
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
       bio: '使わなくなったベビー服や知育玩具を大切にお譲りしています！お気軽にDMどうぞ✨',
       neighborhood: '東京都新宿区',
       prefecture: '東京都',
       babyStages: ['0-6ヶ月 (乳児)'],
-      followerCount: 42,
-      followingCount: 20,
-      listedCount: 3,
-      givenCount: 2,
-      badges: ['認証ママ'],
-      createdAt: '2026-10-01'
+      followerCount: 0,
+      followingCount: 0,
+      isFollowing: false,
+      listedCount: 0,
+      givenCount: 0,
+      badges: ['認証アカウント', '登録メンバー'],
+      createdAt: '2026-11-01'
     };
-    setActiveProfile(found);
+
+    // Calculate real dynamic stats for self
+    if (currentUser && (userId === currentUser.id || userId === 'user-me')) {
+      const myListings = items.filter((i) => i.giverId === userId || i.giverId === currentUser.id);
+      currentProfile.listedCount = myListings.length;
+      currentProfile.givenCount = myListings.filter((i) => i.status === 'claimed').length;
+    }
+
+    setActiveProfile(currentProfile);
+  };
+
+  const handleOpenMessages = () => {
+    if (!currentUser) {
+      setAuthGateReason('messages');
+      return;
+    }
+    setIsChatOpen(true);
   };
 
   // Start chat with user / about item
   const handleStartChat = async (userId: string, userName: string, userAvatar: string, item?: Item) => {
+    if (!currentUser) {
+      setAuthGateReason('messages');
+      return;
+    }
+
     let room = chatRooms.find((r) => r.participant.id === userId);
 
     if (!room) {
@@ -307,7 +467,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     setIsChatOpen(true);
   };
 
-  // Send message with remote DB write
+  // Send message with remote DB write & optimistic deduplication
   const handleSendMessage = async (roomId: string, content: string) => {
     const tempId = `msg-${Date.now()}`;
     const newMsg: ChatMessage = {
@@ -334,14 +494,30 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       )
     );
 
-    // Persist message to Supabase DB
+    // Persist message to Supabase DB & reconcile optimistic tempId
     if (isSupabaseConfigured()) {
-      await insertChatMessageToSupabase(
+      insertChatMessageToSupabase(
         roomId,
         content,
         currentUser?.id || 'me',
         currentUser?.email?.split('@')[0] || 'あなた'
-      );
+      ).then((saved) => {
+        if (saved) {
+          setChatMessages((prev) => {
+            const list = prev[roomId] || [];
+            if (list.some((m) => m.id === saved.id)) {
+              return {
+                ...prev,
+                [roomId]: list.filter((m) => m.id !== tempId)
+              };
+            }
+            return {
+              ...prev,
+              [roomId]: list.map((m) => (m.id === tempId ? saved : m))
+            };
+          });
+        }
+      });
     }
   };
 
@@ -453,9 +629,15 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
 
   // Add Comment on Community Post
   const handleAddPostComment = (postId: string, content: string) => {
-    const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'];
+    const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'] || {
+      id: currentUser?.id || 'user-me',
+      displayName: currentUser?.email?.split('@')[0] || '子育てユーザー',
+      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80'
+    };
+
+    const tempCommentId = `pc-${Date.now()}`;
     const newComment: PostComment = {
-      id: `pc-${Date.now()}`,
+      id: tempCommentId,
       postId,
       authorId: userProfile.id,
       authorName: userProfile.displayName,
@@ -472,27 +654,52 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
-          ? { ...p, commentCount: (p.commentCount || 0) + 1 }
+          ? { ...p, commentCount: ((postComments[postId] || []).length || p.commentCount || 0) + 1 }
           : p
       )
     );
+
+    if (isSupabaseConfigured()) {
+      insertPostCommentToSupabase(
+        postId,
+        content,
+        currentUser?.id,
+        userProfile.displayName,
+        userProfile.avatarUrl
+      ).then((savedComment) => {
+        if (savedComment) {
+          setPostComments((prev) => ({
+            ...prev,
+            [postId]: (prev[postId] || []).map((c) => (c.id === tempCommentId ? savedComment : c))
+          }));
+        }
+      });
+    }
 
     showToast(locale === 'en' ? 'Reply posted!' : '返信コメントを送信しました！');
   };
 
   // Update Profile
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
-    const targetId = activeProfile?.id || 'user-me';
+    const targetId = activeProfile?.id || currentUser?.id || 'user-me';
     setProfiles((prev) => {
       const current = prev[targetId] || DEMO_PROFILES['user-me'];
+      const merged = { ...current, ...updated };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`abilolo_profile_${targetId}`, JSON.stringify(merged));
+      }
       return {
         ...prev,
-        [targetId]: { ...current, ...updated }
+        [targetId]: merged
       };
     });
 
     if (activeProfile) {
       setActiveProfile((prev) => (prev ? { ...prev, ...updated } : null));
+    }
+
+    if (isSupabaseConfigured() && currentUser?.id === targetId) {
+      upsertUserProfileToSupabase(targetId, updated);
     }
 
     showToast(locale === 'en' ? 'Profile updated!' : 'プロフィールを更新しました！');
@@ -504,6 +711,9 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       if (supabase) {
         await supabase.auth.signOut();
       }
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('abilolo_auth_user');
     }
     setCurrentUser(null);
   };
@@ -542,7 +752,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         unreadChatCount={totalUnreadChats}
         onOpenListing={() => setIsListingOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
-        onOpenChat={() => setIsChatOpen(true)}
+        onOpenChat={handleOpenMessages}
         onOpenProfile={() => handleOpenProfile('user-me')}
         onLogout={handleLogout}
         searchQuery={searchQuery}
@@ -708,6 +918,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           onAddPost={handleAddPost}
           onToggleLikePost={handleToggleLikePost}
           onAddPostComment={handleAddPostComment}
+          onShowToast={showToast}
         />
       )}
 
@@ -762,9 +973,38 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       <AuthModal
         isOpen={isAuthOpen}
         locale={locale}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => {
+          setIsAuthOpen(false);
+          setPendingGatedAction(null);
+        }}
         onAuthSuccess={(userEmail) => {
-          setCurrentUser({ email: userEmail });
+          const u = { id: currentUser?.id || `user-${Date.now().toString(36)}`, email: userEmail };
+          setCurrentUser(u);
+          const prof = syncCurrentUserProfile(u);
+          const targetAction = pendingGatedAction || authGateReason;
+          if (targetAction === 'messages') {
+            setIsChatOpen(true);
+          } else if (targetAction === 'profile') {
+            setActiveProfile(prof || null);
+          }
+          setPendingGatedAction(null);
+          setAuthGateReason(null);
+        }}
+      />
+
+      {/* Auth Gate for Personal Pages (Messages & Profile) */}
+      <AuthGateModal
+        isOpen={!!authGateReason}
+        target={authGateReason || 'general'}
+        locale={locale}
+        onClose={() => {
+          setAuthGateReason(null);
+          setPendingGatedAction(null);
+        }}
+        onOpenAuth={() => {
+          setPendingGatedAction(authGateReason);
+          setAuthGateReason(null);
+          setIsAuthOpen(true);
         }}
       />
 
@@ -787,6 +1027,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           }}
           onToggleLikeItem={handleToggleLikeItem}
           onUpdateProfile={handleUpdateProfile}
+          onShowToast={showToast}
         />
       )}
 
@@ -814,7 +1055,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         currentUser={currentUser}
         onSelectTab={setCurrentTab}
         onOpenListing={() => setIsListingOpen(true)}
-        onOpenChat={() => setIsChatOpen(true)}
+        onOpenChat={handleOpenMessages}
         onOpenProfile={() => handleOpenProfile('user-me')}
       />
 
