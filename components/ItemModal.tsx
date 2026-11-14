@@ -8,6 +8,7 @@ import { Locale, DICTIONARY } from '@/lib/i18n';
 interface ItemModalProps {
   item: Item | null;
   locale: Locale;
+  currentUser?: { id?: string; email?: string } | null;
   comments?: ItemComment[];
   onClose: () => void;
   onRequestClaim: (item: Item) => void;
@@ -15,18 +16,21 @@ interface ItemModalProps {
   onStartChat?: (userId: string, userName: string, userAvatar: string, item?: Item) => void;
   onToggleLike?: (itemId: string) => void;
   onAddComment?: (itemId: string, content: string) => void;
+  onRequireAuth?: (target: 'comment') => void;
 }
 
 export const ItemModal: React.FC<ItemModalProps> = ({
   item,
   locale,
+  currentUser,
   comments = [],
   onClose,
   onRequestClaim,
   onOpenProfile,
   onStartChat,
   onToggleLike,
-  onAddComment
+  onAddComment,
+  onRequireAuth
 }) => {
   const [commentText, setCommentText] = useState('');
 
@@ -37,6 +41,10 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      onRequireAuth?.('comment');
+      return;
+    }
     if (!commentText.trim()) return;
     onAddComment?.(item.id, commentText.trim());
     setCommentText('');
@@ -212,7 +220,13 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setCommentText(tag)}
+                  onClick={() => {
+                    if (!currentUser) {
+                      onRequireAuth?.('comment');
+                      return;
+                    }
+                    setCommentText(tag);
+                  }}
                   className="text-[10px] bg-white hover:bg-pink-50 hover:text-pink-700 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full transition-colors"
                 >
                   {tag}
@@ -225,6 +239,11 @@ export const ItemModal: React.FC<ItemModalProps> = ({
               <input
                 type="text"
                 value={commentText}
+                onFocus={() => {
+                  if (!currentUser) {
+                    onRequireAuth?.('comment');
+                  }
+                }}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder={t.itemCommentPlaceholder}
                 className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 text-gray-800"

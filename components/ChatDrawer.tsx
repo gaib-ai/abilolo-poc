@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatRoom, ChatMessage } from '@/lib/types';
-import { Locale, DICTIONARY } from '@/lib/i18n';
+import { Locale, DICTIONARY, ENGLISH_ITEMS } from '@/lib/i18n';
 import { X, Send, ArrowLeft, MessageSquare, MapPin, CheckCheck, Package, Sparkles } from 'lucide-react';
 
 interface ChatDrawerProps {
@@ -11,6 +11,7 @@ interface ChatDrawerProps {
   rooms: ChatRoom[];
   messages: Record<string, ChatMessage[]>;
   locale: Locale;
+  currentUserId?: string | null;
   onClose: () => void;
   onSendMessage: (roomId: string, content: string) => void;
   onSelectRoom: (roomId: string) => void;
@@ -23,6 +24,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   rooms,
   messages,
   locale,
+  currentUserId,
   onClose,
   onSendMessage,
   onSelectRoom,
@@ -82,7 +84,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-40 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
+    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-50 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
       <div 
         className="bg-white w-full h-full md:max-w-2xl md:h-[82vh] md:rounded-3xl md:shadow-2xl md:border md:border-gray-100 flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
@@ -121,6 +123,9 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {rooms.map((room) => {
                 const isSelected = room.id === selectedRoomId;
+                const roomItemTitle = locale === 'en'
+                  ? (ENGLISH_ITEMS.find((i) => i.id === room.itemId)?.title || room.itemTitle)
+                  : room.itemTitle;
                 return (
                   <button
                     key={room.id}
@@ -158,10 +163,10 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                       <p className="text-[11px] text-gray-500 truncate mt-0.5">
                         {room.lastMessage || t.chatStartPrompt}
                       </p>
-                      {room.itemTitle && (
+                      {roomItemTitle && (
                         <div className="flex items-center gap-1 text-[10px] text-pink-600 mt-1 truncate">
                           <Package className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{room.itemTitle}</span>
+                          <span className="truncate">{roomItemTitle}</span>
                         </div>
                       )}
                     </div>
@@ -219,28 +224,33 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
               </div>
 
               {/* Inquiring Item Card Banner */}
-              {currentRoom.itemTitle && (
-                <div className="px-4 py-2.5 bg-gradient-to-r from-pink-50 to-rose-50/50 border-b border-pink-100 flex items-center gap-3">
-                  {currentRoom.itemImage && (
-                    <img
-                      src={currentRoom.itemImage}
-                      alt={currentRoom.itemTitle}
-                      className="w-10 h-10 rounded-xl object-cover border border-pink-200/50 shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold text-pink-600 tracking-wider uppercase">
-                      {t.inquiryItemBanner}
+              {currentRoom.itemTitle && (() => {
+                const activeItemTitle = locale === 'en'
+                  ? (ENGLISH_ITEMS.find((i) => i.id === currentRoom.itemId)?.title || currentRoom.itemTitle)
+                  : currentRoom.itemTitle;
+                return (
+                  <div className="px-4 py-2.5 bg-gradient-to-r from-pink-50 to-rose-50/50 border-b border-pink-100 flex items-center gap-3">
+                    {currentRoom.itemImage && (
+                      <img
+                        src={currentRoom.itemImage}
+                        alt={activeItemTitle}
+                        className="w-10 h-10 rounded-xl object-cover border border-pink-200/50 shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-bold text-pink-600 tracking-wider uppercase">
+                        {t.inquiryItemBanner}
+                      </span>
+                      <h5 className="text-xs font-bold text-gray-900 truncate">
+                        {activeItemTitle}
+                      </h5>
+                    </div>
+                    <span className="text-xs font-black text-pink-600 bg-white px-2 py-0.5 rounded-full border border-pink-200 shadow-xs shrink-0">
+                      {t.cardZeroYen}
                     </span>
-                    <h5 className="text-xs font-bold text-gray-900 truncate">
-                      {currentRoom.itemTitle}
-                    </h5>
                   </div>
-                  <span className="text-xs font-black text-pink-600 bg-white px-2 py-0.5 rounded-full border border-pink-200 shadow-xs shrink-0">
-                    {t.cardZeroYen}
-                  </span>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Message Feed */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#faf9fa]">
@@ -250,39 +260,46 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                   </span>
                 </div>
 
-                {uniqueMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex items-end gap-2 ${
-                      msg.isMine ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {!msg.isMine && (
-                      <img
-                        src={msg.senderAvatar || currentRoom.participant.avatar}
-                        alt={msg.senderName}
-                        className="w-7 h-7 rounded-full object-cover shrink-0 mb-1"
-                      />
-                    )}
+                {uniqueMessages.map((msg) => {
+                  const isMine = Boolean(
+                    msg.isMine ||
+                    msg.senderId === 'me' ||
+                    (currentUserId && msg.senderId === currentUserId)
+                  );
+                  return (
                     <div
-                      className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs leading-relaxed ${
-                        msg.isMine
-                          ? 'bg-gradient-to-tr from-pink-500 to-rose-500 text-white rounded-br-xs'
-                          : 'bg-white text-gray-800 border border-gray-100 rounded-bl-xs'
+                      key={msg.id}
+                      className={`flex items-end gap-2 ${
+                        isMine ? 'justify-end' : 'justify-start'
                       }`}
                     >
-                      <p className="whitespace-pre-line">{msg.content}</p>
+                      {!isMine && (
+                        <img
+                          src={msg.senderAvatar || currentRoom.participant.avatar}
+                          alt={msg.senderName}
+                          className="w-7 h-7 rounded-full object-cover shrink-0 mb-1"
+                        />
+                      )}
                       <div
-                        className={`text-[9px] mt-1 text-right flex items-center justify-end gap-1 ${
-                          msg.isMine ? 'text-pink-100' : 'text-gray-400'
+                        className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs leading-relaxed ${
+                          isMine
+                            ? 'bg-gradient-to-tr from-pink-500 to-rose-500 text-white rounded-br-xs'
+                            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-xs'
                         }`}
                       >
-                        <span>{msg.createdAt}</span>
-                        {msg.isMine && <CheckCheck className="w-3 h-3 text-pink-200" />}
+                        <p className="whitespace-pre-line">{msg.content}</p>
+                        <div
+                          className={`text-[9px] mt-1 text-right flex items-center justify-end gap-1 ${
+                            isMine ? 'text-pink-100' : 'text-gray-400'
+                          }`}
+                        >
+                          <span>{msg.createdAt}</span>
+                          {isMine && <CheckCheck className="w-3 h-3 text-pink-200" />}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
 

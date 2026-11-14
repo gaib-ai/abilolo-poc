@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Item, CommunityPost, UserProfile, ChatRoom, ChatMessage, ItemComment, PostComment } from '@/lib/types';
 import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES, DEMO_ITEM_COMMENTS, DEMO_POST_COMMENTS, DEFAULT_AVATAR_URL } from '@/lib/data';
-import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS } from '@/lib/i18n';
+import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS, ENGLISH_CHAT_ROOMS, ENGLISH_CHAT_MESSAGES } from '@/lib/i18n';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/is-configured';
 import {
@@ -34,7 +34,7 @@ import { ItemModal } from '@/components/ItemModal';
 import { ClaimModal } from '@/components/ClaimModal';
 import { ListingModal } from '@/components/ListingModal';
 import { AuthModal } from '@/components/AuthModal';
-import { AuthGateModal } from '@/components/AuthGateModal';
+import { AuthGateModal, AuthGateTarget } from '@/components/AuthGateModal';
 import { BottomNav } from '@/components/BottomNav';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { ProfileModal } from '@/components/ProfileModal';
@@ -52,6 +52,8 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const initialData = locale === 'en' ? ENGLISH_ITEMS : INITIAL_ITEMS;
   const categoryList = locale === 'en' ? ENGLISH_CATEGORIES : CATEGORIES;
   const prefectureList = locale === 'en' ? ENGLISH_PREFECTURES : PREFECTURES;
+  const initialChatRooms = locale === 'en' ? ENGLISH_CHAT_ROOMS : DEMO_CHAT_ROOMS;
+  const initialChatMessages = locale === 'en' ? ENGLISH_CHAT_MESSAGES : DEMO_CHAT_MESSAGES;
   const storageKey = `abilolo_items_${locale}`;
 
   // Main active tab
@@ -80,16 +82,17 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   };
 
   // Chat State (Full remote persistence + Realtime)
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>(DEMO_CHAT_ROOMS);
-  const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>(DEMO_CHAT_MESSAGES);
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>(initialChatRooms);
+  const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>(initialChatMessages);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatRoomId, setActiveChatRoomId] = useState<string | null>(null);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
   // Auth state
   const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authGateReason, setAuthGateReason] = useState<'messages' | 'profile' | null>(null);
-  const [pendingGatedAction, setPendingGatedAction] = useState<'messages' | 'profile' | null>(null);
+  const [authGateReason, setAuthGateReason] = useState<AuthGateTarget | null>(null);
+  const [pendingGatedAction, setPendingGatedAction] = useState<AuthGateTarget | null>(null);
 
   // Sync / create real user profile synchronously in state + async in Supabase
   const syncCurrentUserProfile = (user: { id?: string; email?: string }) => {
@@ -242,7 +245,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             setChatRooms(remoteRooms);
             // Fetch messages for each room
             remoteRooms.forEach((r) => {
-              fetchChatMessagesFromSupabase(r.id).then((msgs) => {
+              fetchChatMessagesFromSupabase(r.id, currentUser?.id).then((msgs) => {
                 if (msgs) {
                   setChatMessages((prev) => ({
                     ...prev,
@@ -311,6 +314,35 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       }
     }
   }, [storageKey, currentUser?.id]);
+
+  // Deep-link to user profile via ?user=..., ?profile=..., or #profile-...
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user') || params.get('profile');
+    const hash = window.location.hash;
+    const hashUser = hash && hash.startsWith('#profile-') ? decodeURIComponent(hash.slice(9)) : null;
+
+    const targetUser = userParam || hashUser;
+    if (targetUser) {
+      const found =
+        Object.values(profiles).find(
+          (p) =>
+            p.id.toLowerCase() === targetUser.toLowerCase() ||
+            p.username?.toLowerCase() === targetUser.toLowerCase()
+        ) ||
+        (targetUser === 'user-me' ? profiles['user-me'] : null);
+
+      if (found) {
+        setActiveProfile(found);
+      } else if (isSupabaseConfigured()) {
+        fetchUserProfileFromSupabase(targetUser).then((remote) => {
+          if (remote) setActiveProfile(remote);
+        });
+      }
+    }
+  }, [profiles]);
 
   // Add new item with DB persistence
   const handleAddListing = async (newItem: Item) => {
@@ -409,6 +441,9 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       currentProfile.givenCount = myListings.filter((i) => i.status === 'claimed').length;
     }
 
+    setIsCreatePostOpen(false);
+    setIsListingOpen(false);
+    setSelectedItem(null);
     setIsChatOpen(false);
     setActiveProfile(currentProfile);
   };
@@ -418,6 +453,9 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       setAuthGateReason('messages');
       return;
     }
+    setIsCreatePostOpen(false);
+    setIsListingOpen(false);
+    setSelectedItem(null);
     setActiveProfile(null);
     setIsChatOpen(true);
   };
@@ -440,6 +478,9 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       setAuthGateReason('messages');
       return;
     }
+    setIsCreatePostOpen(false);
+    setIsListingOpen(false);
+    setActiveProfile(null);
 
     let room = chatRooms.find((r) => r.participant.id === userId);
 
@@ -942,6 +983,11 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           posts={posts}
           comments={postComments}
           locale={locale}
+          currentUser={currentUser}
+          isCreateOpen={isCreatePostOpen}
+          onOpenCreate={() => setIsCreatePostOpen(true)}
+          onCloseCreate={() => setIsCreatePostOpen(false)}
+          onRequireAuth={(target) => setAuthGateReason(target)}
           onOpenProfile={handleOpenProfile}
           onOpenAuth={() => setIsAuthOpen(true)}
           onAddPost={handleAddPost}
@@ -969,9 +1015,15 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       <ItemModal
         item={selectedItem}
         locale={locale}
+        currentUser={currentUser}
         comments={selectedItem ? (itemComments[selectedItem.id] || []) : []}
         onClose={() => setSelectedItem(null)}
         onRequestClaim={(item) => {
+          if (!currentUser) {
+            setSelectedItem(null);
+            setAuthGateReason('claim');
+            return;
+          }
           setSelectedItem(null);
           setClaimingItem(item);
         }}
@@ -982,6 +1034,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         }}
         onToggleLike={handleToggleLikeItem}
         onAddComment={handleAddItemComment}
+        onRequireAuth={(target) => setAuthGateReason(target)}
       />
 
       <ClaimModal
@@ -1015,6 +1068,8 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             setIsChatOpen(true);
           } else if (targetAction === 'profile') {
             setActiveProfile(prof || null);
+          } else if (targetAction === 'post') {
+            setIsCreatePostOpen(true);
           }
           setPendingGatedAction(null);
           setAuthGateReason(null);
@@ -1067,6 +1122,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         rooms={chatRooms}
         messages={chatMessages}
         locale={locale}
+        currentUserId={currentUser?.id}
         onClose={() => {
           setIsChatOpen(false);
           setActiveChatRoomId(null);
@@ -1089,6 +1145,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         unreadChatCount={totalUnreadChats}
         currentUser={currentUser}
         onSelectTab={(tab) => {
+          setIsCreatePostOpen(false);
           if (tab === 'chat') {
             handleOpenMessages();
             return;

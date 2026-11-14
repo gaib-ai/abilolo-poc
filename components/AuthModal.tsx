@@ -59,10 +59,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
 
+    const currentPath = typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}${window.location.hash}` : '/';
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email: targetEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: callbackUrl
       }
     });
 

@@ -1,4 +1,4 @@
-import { Item, CategoryInfo, UserProfile, CommunityPost } from './types';
+import { Item, CategoryInfo, UserProfile, CommunityPost, ChatRoom, ChatMessage } from './types';
 
 export type Locale = 'ja' | 'en';
 
@@ -147,6 +147,21 @@ export const DICTIONARY = {
     authGateBenefit1Profile: '出品したアイテムとお譲り成立履歴の管理',
     authGateBenefit2Profile: '気に入ったお譲り品のお気に入り保存',
     authGateBenefit3Profile: 'コミュニティ掲示板の投稿・返信管理',
+    authGateTitlePost: 'ログインしてコミュニティに投稿する',
+    authGateDescPost: '子育てコミュニティへのTipsやお譲りリクエストの投稿には無料アカウントでのログインが必要です。お譲り品の閲覧はログイン不要でお楽しみいただけます。',
+    authGateBenefit1Post: '近所のパパ・ママへお譲りリクエスト',
+    authGateBenefit2Post: 'リアルな育児Tipsの共有・相談',
+    authGateBenefit3Post: '投稿への返信通知を受け取る',
+    authGateTitleComment: 'ログインしてコメント・返信する',
+    authGateDescComment: '出品者への公開質問や子育て掲示板への返信にはログインが必要です。',
+    authGateBenefit1Comment: '出品者へ直接質問・状態確認ができる',
+    authGateBenefit2Comment: '地域のパパ・ママにアドバイスを返信',
+    authGateBenefit3Comment: '安心・安全なコミュニティ利用',
+    authGateTitleClaim: 'ログインしてお譲り希望を申請する',
+    authGateDescClaim: '0円お譲り品の希望申請には、配送先情報の入力とアカウント認証が必要です。出品者への代金支払いや手数料は一切発生しません。',
+    authGateBenefit1Claim: '0円で欲しい育児用品をリクエスト',
+    authGateBenefit2Claim: 'ヤマト・ゆうパック着払いで安全受け取り',
+    authGateBenefit3Claim: '出品者とのスムーズな連絡',
     chatSecureNotice: '🔒 メッセージは安全に保護されています',
     chatStartPrompt: '会話を始めましょう',
     chatSelectPrompt: 'チャットを選択するか、出品者にメッセージを送信してください',
@@ -309,6 +324,21 @@ export const DICTIONARY = {
     authGateBenefit1Profile: 'Manage your listings & matched items',
     authGateBenefit2Profile: 'Keep track of your bookmarked favorites',
     authGateBenefit3Profile: 'View and manage your community discussions',
+    authGateTitlePost: 'Log in to publish a community post',
+    authGateDescPost: 'Sharing parenting tips and posting gear requests requires a free user account. You can freely browse items and map without logging in.',
+    authGateBenefit1Post: 'Request baby gear from nearby families',
+    authGateBenefit2Post: 'Share helpful parenting tips & real experiences',
+    authGateBenefit3Post: 'Get notified when parents reply to your post',
+    authGateTitleComment: 'Log in to reply or comment',
+    authGateDescComment: 'Asking public questions on gifts or replying to community posts requires a free user account.',
+    authGateBenefit1Comment: 'Ask item givers direct public questions',
+    authGateBenefit2Comment: 'Share advice with other parents in the neighborhood',
+    authGateBenefit3Comment: 'Safe and verified community interaction',
+    authGateTitleClaim: 'Log in to request this item',
+    authGateDescClaim: 'Requesting ¥0 items requires account login to coordinate safe delivery. Recipient only covers shipping upon arrival.',
+    authGateBenefit1Claim: 'Request ¥0 baby gear instantly with 1 tap',
+    authGateBenefit2Claim: 'Safe cash-on-delivery (COD) courier shipping',
+    authGateBenefit3Claim: 'Direct messaging and status tracking with giver',
     chatSecureNotice: '🔒 Messages are securely protected',
     chatStartPrompt: 'Start a conversation',
     chatSelectPrompt: 'Select a chat or send a message to a giver',
@@ -536,3 +566,91 @@ export const ENGLISH_ITEMS: Item[] = [
 export const ENGLISH_PREFECTURES = [
   'Tokyo', 'Kanagawa', 'Saitama', 'Chiba', 'Osaka', 'Aichi', 'Fukuoka', 'Hyogo', 'Hokkaido', 'Kyoto', 'Other'
 ];
+
+export const ENGLISH_CHAT_ROOMS: ChatRoom[] = [
+  {
+    id: 'room-1',
+    participant: {
+      id: 'user-sakura',
+      name: 'Sakura Mama 🌸',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      neighborhood: 'Tokyo, Shinjuku'
+    },
+    itemId: 'item-1',
+    itemTitle: 'Combi Sugocal 4-Cas Compact Stroller (Type A)',
+    itemImage: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=400&q=80',
+    lastMessage: "All packed up! I'll dispatch via Yamato cash-on-delivery tomorrow.",
+    lastMessageAt: '10:45',
+    unreadCount: 1
+  },
+  {
+    id: 'room-2',
+    participant: {
+      id: 'user-ken',
+      name: 'Ken_Dad 🍼',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      neighborhood: 'Tokyo, Shibuya'
+    },
+    itemId: 'item-2',
+    itemTitle: 'Ergobaby OMNI 360 All-In-One Carrier',
+    itemImage: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=400&q=80',
+    lastMessage: 'Thanks for requesting! The safety harness is included in the box.',
+    lastMessageAt: 'Yesterday',
+    unreadCount: 0
+  }
+];
+
+export const ENGLISH_CHAT_MESSAGES: Record<string, ChatMessage[]> = {
+  'room-1': [
+    {
+      id: 'msg-1',
+      roomId: 'room-1',
+      senderId: 'me',
+      senderName: 'You',
+      content: 'Hello! I requested your Combi stroller. Is it still available?',
+      createdAt: '10:15',
+      isMine: true
+    },
+    {
+      id: 'msg-2',
+      roomId: 'room-1',
+      senderId: 'user-sakura',
+      senderName: 'Sakura Mama 🌸',
+      senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: 'Thank you for reaching out! Yes, absolutely. It will be sent cash on delivery (recipient covers shipping only), is that okay with you?',
+      createdAt: '10:22',
+      isMine: false
+    },
+    {
+      id: 'msg-3',
+      roomId: 'room-1',
+      senderId: 'me',
+      senderName: 'You',
+      content: 'Yes! Covering the COD shipping upon arrival is totally fine. Thank you so much!',
+      createdAt: '10:30',
+      isMine: true
+    },
+    {
+      id: 'msg-4',
+      roomId: 'room-1',
+      senderId: 'user-sakura',
+      senderName: 'Sakura Mama 🌸',
+      senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      content: "All packed up! I'll dispatch via Yamato cash-on-delivery tomorrow and share the tracking slip number once available!",
+      createdAt: '10:45',
+      isMine: false
+    }
+  ],
+  'room-2': [
+    {
+      id: 'msg-201',
+      roomId: 'room-2',
+      senderId: 'user-ken',
+      senderName: 'Ken_Dad 🍼',
+      senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      content: 'Thanks for requesting! The safety harness is included in the box as well.',
+      createdAt: 'Yesterday 15:30',
+      isMine: false
+    }
+  ]
+};

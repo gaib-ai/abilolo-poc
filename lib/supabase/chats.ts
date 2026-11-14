@@ -40,7 +40,10 @@ export async function fetchChatRoomsFromSupabase(): Promise<ChatRoom[] | null> {
   }
 }
 
-export async function fetchChatMessagesFromSupabase(roomId: string): Promise<ChatMessage[] | null> {
+export async function fetchChatMessagesFromSupabase(
+  roomId: string,
+  currentUserId?: string
+): Promise<ChatMessage[] | null> {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return null;
 
@@ -64,7 +67,7 @@ export async function fetchChatMessagesFromSupabase(roomId: string): Promise<Cha
       senderAvatar: row.sender_avatar,
       content: row.content,
       createdAt: row.created_at ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      isMine: row.sender_id === 'me'
+      isMine: row.sender_id === 'me' || (currentUserId ? row.sender_id === currentUserId : false)
     }));
   } catch (err) {
     console.error('Failed to query messages:', err);
@@ -117,7 +120,7 @@ export async function insertChatMessageToSupabase(
       senderAvatar: data.sender_avatar,
       content: data.content,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMine: data.sender_id === 'me'
+      isMine: true
     };
   } catch (err) {
     console.error('Failed to send message to Supabase:', err);

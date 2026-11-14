@@ -10,6 +10,11 @@ interface CommunityFeedProps {
   posts: CommunityPost[];
   comments?: Record<string, PostComment[]>;
   locale: Locale;
+  currentUser?: { id?: string; email?: string } | null;
+  isCreateOpen: boolean;
+  onOpenCreate: () => void;
+  onCloseCreate: () => void;
+  onRequireAuth?: (target: 'post' | 'comment') => void;
   onOpenProfile: (userId: string) => void;
   onOpenAuth: () => void;
   onAddPost: (post: Omit<CommunityPost, 'id' | 'likes' | 'commentCount' | 'createdAt'>) => void;
@@ -22,6 +27,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   posts,
   comments = {},
   locale,
+  currentUser,
+  isCreateOpen,
+  onOpenCreate,
+  onCloseCreate,
+  onRequireAuth,
   onOpenProfile,
   onOpenAuth,
   onAddPost,
@@ -31,7 +41,6 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 }) => {
   const t = DICTIONARY[locale];
   const [filter, setFilter] = useState<'all' | 'tip' | 'request'>('all');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
@@ -45,6 +54,10 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
   const handlePostCommentSubmit = (postId: string, e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      onRequireAuth?.('comment');
+      return;
+    }
     const text = (commentInputs[postId] || '').trim();
     if (!text) return;
     onAddPostComment?.(postId, text);
@@ -81,6 +94,10 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      onRequireAuth?.('post');
+      return;
+    }
     if (!content.trim()) return;
 
     const loc = TOKYO_LOCATIONS.find((l) => l.name === neighborhood) || TOKYO_LOCATIONS[0];
@@ -100,7 +117,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
     setContent('');
     setImageUrl('');
-    setIsCreateOpen(false);
+    onCloseCreate();
   };
 
   return (
@@ -118,7 +135,13 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
           </p>
         </div>
         <button
-          onClick={() => setIsCreateOpen(true)}
+          onClick={() => {
+            if (!currentUser) {
+              onRequireAuth?.('post');
+              return;
+            }
+            onOpenCreate();
+          }}
           className="bg-white text-pink-600 font-black text-xs px-4 py-3 rounded-2xl shadow-lg hover:bg-pink-50 transition-all flex items-center gap-1.5 active:scale-95 shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -303,6 +326,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     <input
                       type="text"
                       value={commentInputs[post.id] || ''}
+                      onFocus={() => {
+                        if (!currentUser) {
+                          onRequireAuth?.('comment');
+                        }
+                      }}
                       onChange={(e) =>
                         setCommentInputs((prev) => ({
                           ...prev,
@@ -340,7 +368,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 {locale === 'en' ? 'Create Community Post' : 'コミュニティに投稿する'}
               </h3>
               <button
-                onClick={() => setIsCreateOpen(false)}
+                onClick={onCloseCreate}
                 className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200"
               >
                 <X className="w-4 h-4" />
@@ -441,7 +469,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={onCloseCreate}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
                 >
                   {t.cancelBtn}

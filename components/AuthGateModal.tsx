@@ -2,11 +2,13 @@
 
 import React from 'react';
 import { Locale, DICTIONARY } from '@/lib/i18n';
-import { X, MessageSquare, User, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, MessageSquare, User, Lock, CheckCircle2, ArrowRight, Users, MessageCircle, HeartHandshake } from 'lucide-react';
+
+export type AuthGateTarget = 'messages' | 'profile' | 'post' | 'comment' | 'claim' | 'general';
 
 interface AuthGateModalProps {
   isOpen: boolean;
-  target: 'messages' | 'profile' | 'general';
+  target: AuthGateTarget;
   locale: Locale;
   onClose: () => void;
   onOpenAuth: () => void;
@@ -22,13 +24,33 @@ export const AuthGateModal: React.FC<AuthGateModalProps> = ({
   if (!isOpen) return null;
 
   const t = DICTIONARY[locale];
-  const isMessages = target === 'messages';
 
-  const title = isMessages ? t.authGateTitleMessages : t.authGateTitleProfile;
-  const description = isMessages ? t.authGateDescMessages : t.authGateDescProfile;
-  const benefits = isMessages
-    ? [t.authGateBenefit1Messages, t.authGateBenefit2Messages, t.authGateBenefit3Messages]
-    : [t.authGateBenefit1Profile, t.authGateBenefit2Profile, t.authGateBenefit3Profile];
+  let title = t.authGateTitleMessages;
+  let description = t.authGateDescMessages;
+  let benefits = [t.authGateBenefit1Messages, t.authGateBenefit2Messages, t.authGateBenefit3Messages];
+  let IconComponent = MessageSquare;
+
+  if (target === 'profile') {
+    title = t.authGateTitleProfile;
+    description = t.authGateDescProfile;
+    benefits = [t.authGateBenefit1Profile, t.authGateBenefit2Profile, t.authGateBenefit3Profile];
+    IconComponent = User;
+  } else if (target === 'post') {
+    title = t.authGateTitlePost;
+    description = t.authGateDescPost;
+    benefits = [t.authGateBenefit1Post, t.authGateBenefit2Post, t.authGateBenefit3Post];
+    IconComponent = Users;
+  } else if (target === 'comment') {
+    title = t.authGateTitleComment;
+    description = t.authGateDescComment;
+    benefits = [t.authGateBenefit1Comment, t.authGateBenefit2Comment, t.authGateBenefit3Comment];
+    IconComponent = MessageCircle;
+  } else if (target === 'claim') {
+    title = t.authGateTitleClaim;
+    description = t.authGateDescClaim;
+    benefits = [t.authGateBenefit1Claim, t.authGateBenefit2Claim, t.authGateBenefit3Claim];
+    IconComponent = HeartHandshake;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -48,7 +70,7 @@ export const AuthGateModal: React.FC<AuthGateModalProps> = ({
         {/* Icon & Category Badge */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center shadow-md shadow-pink-500/20">
-            {isMessages ? <MessageSquare className="w-6 h-6" /> : <User className="w-6 h-6" />}
+            <IconComponent className="w-6 h-6" />
           </div>
           <div>
             <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">

@@ -109,7 +109,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const handleShareProfile = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}/#profile-${profile.username}`);
+      const shareUrl = `${window.location.origin}${locale === 'en' ? '/en' : ''}?user=${encodeURIComponent(profile.username || profile.id)}`;
+      navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
       onShowToast?.(t.copiedToClipboard);
       setTimeout(() => setCopiedLink(false), 2000);
@@ -117,7 +118,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-40 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
+    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-50 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
       <div
         className="bg-white w-full h-full md:max-w-xl md:max-h-[92vh] md:rounded-3xl md:shadow-2xl md:border md:border-gray-100 overflow-y-auto flex flex-col relative"
         onClick={(e) => e.stopPropagation()}
