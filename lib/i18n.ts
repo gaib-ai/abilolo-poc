@@ -146,7 +146,24 @@ export const DICTIONARY = {
     authGateBenefit3Messages: '新着メッセージのリアルタイム通知',
     authGateBenefit1Profile: '出品したアイテムとお譲り成立履歴の管理',
     authGateBenefit2Profile: '気に入ったお譲り品のお気に入り保存',
-    authGateBenefit3Profile: 'コミュニティ掲示板の投稿・返信管理'
+    authGateBenefit3Profile: 'コミュニティ掲示板の投稿・返信管理',
+    chatSecureNotice: '🔒 メッセージは安全に保護されています',
+    chatStartPrompt: '会話を始めましょう',
+    chatSelectPrompt: 'チャットを選択するか、出品者にメッセージを送信してください',
+    chatInputPlaceholder: 'メッセージを入力してください...',
+    postCategoryLabel: '投稿カテゴリ',
+    postCategoryTip: '💡 お役立ちTips / 体験談',
+    postCategoryRequest: '🎁 お譲りリクエスト / 相談',
+    postAreaLabel: 'エリア・地域',
+    postContentLabel: '投稿本文 *',
+    postPlaceholderTip: 'おすすめの育児グッズや便利ワザをシェアしてください...',
+    postPlaceholderRequest: '探しているお譲り品（例: 抱っこ紐、B型ベビーカー）や気になることを記入してください...',
+    postPhotoLabel: '写真を追加 (URLまたはサンプル写真)',
+    postSamplePhotoBtn: 'サンプル写真',
+    postPublishBtn: '投稿を公開する',
+    mapAllTokyo: '東京全体',
+    mapPinsLabel: '地点のピン',
+    likesLabel: 'いいね'
   },
   en: {
     siteTitle: 'Abilolo',
@@ -291,7 +308,24 @@ export const DICTIONARY = {
     authGateBenefit3Messages: 'Real-time alerts for incoming replies',
     authGateBenefit1Profile: 'Manage your listings & matched items',
     authGateBenefit2Profile: 'Keep track of your bookmarked favorites',
-    authGateBenefit3Profile: 'View and manage your community discussions'
+    authGateBenefit3Profile: 'View and manage your community discussions',
+    chatSecureNotice: '🔒 Messages are securely protected',
+    chatStartPrompt: 'Start a conversation',
+    chatSelectPrompt: 'Select a chat or send a message to a giver',
+    chatInputPlaceholder: 'Type a friendly message...',
+    postCategoryLabel: 'Post Category',
+    postCategoryTip: '💡 Tips & Experiences',
+    postCategoryRequest: '🎁 Item Request / Inquiry',
+    postAreaLabel: 'Area / Neighborhood',
+    postContentLabel: 'Post Content *',
+    postPlaceholderTip: 'Share your favorite baby gear tips or helpful parenting advice...',
+    postPlaceholderRequest: 'Describe what item you are looking for (e.g. carrier, stroller) or any questions...',
+    postPhotoLabel: 'Add Photo (URL or Sample Photo)',
+    postSamplePhotoBtn: 'Sample Photo',
+    postPublishBtn: 'Publish Post',
+    mapAllTokyo: 'All Tokyo',
+    mapPinsLabel: 'pins',
+    likesLabel: 'likes'
   }
 };
 

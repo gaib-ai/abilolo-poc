@@ -87,12 +87,12 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
     onAddPost({
       userId: 'user-me',
-      authorName: 'あなた (マイアカウント)',
+      authorName: locale === 'en' ? 'You (My Account)' : 'あなた (マイアカウント)',
       authorAvatar: DEFAULT_AVATAR_URL,
-      authorNeighborhood: `東京都${neighborhood}`,
+      authorNeighborhood: locale === 'en' ? neighborhood : `東京都${neighborhood}`,
       content: content.trim(),
       images: imageUrl ? [imageUrl] : [],
-      neighborhood: `東京都${neighborhood}`,
+      neighborhood: locale === 'en' ? neighborhood : `東京都${neighborhood}`,
       latitude: loc.lat,
       longitude: loc.lng,
       category
@@ -198,7 +198,9 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     : 'bg-amber-50 text-amber-700 border border-amber-200/50'
                 }`}
               >
-                {post.category === 'tip' ? '💡 育児Tips' : '🎁 お譲りリクエスト'}
+                {post.category === 'tip'
+                  ? (locale === 'en' ? '💡 Parenting Tips' : '💡 育児Tips')
+                  : (locale === 'en' ? '🎁 Item Request' : '🎁 お譲りリクエスト')}
               </span>
             </div>
 
@@ -349,7 +351,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               {/* Category picker */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  投稿カテゴリ
+                  {t.postCategoryLabel}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -361,7 +363,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                         : 'border-gray-200 text-gray-600'
                     }`}
                   >
-                    💡 お役立ちTips / 体験談
+                    {t.postCategoryTip}
                   </button>
                   <button
                     type="button"
@@ -372,7 +374,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                         : 'border-gray-200 text-gray-600'
                     }`}
                   >
-                    🎁 お譲りリクエスト / 相談
+                    {t.postCategoryRequest}
                   </button>
                 </div>
               </div>
@@ -380,7 +382,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               {/* Location ward */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  エリア・地域
+                  {t.postAreaLabel}
                 </label>
                 <select
                   value={neighborhood}
@@ -389,7 +391,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 >
                   {TOKYO_LOCATIONS.map((loc) => (
                     <option key={loc.name} value={loc.name}>
-                      東京都 {loc.name}
+                      {locale === 'en' ? loc.name : `東京都 ${loc.name}`}
                     </option>
                   ))}
                 </select>
@@ -398,7 +400,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               {/* Content textarea */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  投稿本文 *
+                  {t.postContentLabel}
                 </label>
                 <textarea
                   value={content}
@@ -406,8 +408,8 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                   rows={4}
                   placeholder={
                     category === 'tip'
-                      ? 'おすすめの育児グッズや便利ワザをシェアしてください...'
-                      : '探しているお譲り品（例: 抱っこ紐、B型ベビーカー）や気になることを記入してください...'
+                      ? t.postPlaceholderTip
+                      : t.postPlaceholderRequest
                   }
                   className="w-full text-xs bg-gray-50 border border-gray-200 rounded-2xl p-3 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
                 />
@@ -416,7 +418,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               {/* Optional photo URL */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  写真を追加 (URLまたはサンプル写真)
+                  {t.postPhotoLabel}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -431,7 +433,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     onClick={() => setImageUrl('https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=80')}
                     className="px-3 py-2 bg-pink-50 text-pink-700 rounded-xl text-[10px] font-bold hover:bg-pink-100"
                   >
-                    サンプル写真
+                    {t.postSamplePhotoBtn}
                   </button>
                 </div>
               </div>
@@ -442,14 +444,14 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                   onClick={() => setIsCreateOpen(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100"
                 >
-                  キャンセル
+                  {t.cancelBtn}
                 </button>
                 <button
                   type="submit"
                   disabled={!content.trim()}
                   className="px-6 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 disabled:opacity-50"
                 >
-                  投稿を公開する
+                  {t.postPublishBtn}
                 </button>
               </div>
             </form>

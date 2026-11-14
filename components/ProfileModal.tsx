@@ -65,7 +65,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const userItems = items.filter(
     (item) =>
       (item.giverId && item.giverId === profile.id) ||
-      (profile.id === 'user-me' && (item.giverId === 'user-me' || item.giverName.includes('あなた'))) ||
+      (profile.id === 'user-me' && (item.giverId === 'user-me' || item.giverName.includes('あなた') || item.giverName.includes('You'))) ||
       (profile.displayName && item.giverName.toLowerCase() === profile.displayName.toLowerCase())
   );
 
@@ -80,7 +80,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const userPosts = posts.filter(
     (post) =>
       post.userId === profile.id ||
-      (profile.id === 'user-me' && (post.userId === 'user-me' || post.authorName.includes('あなた'))) ||
+      (profile.id === 'user-me' && (post.userId === 'user-me' || post.authorName.includes('あなた') || post.authorName.includes('You'))) ||
       (profile.displayName && post.authorName.toLowerCase() === profile.displayName.toLowerCase())
   );
 
@@ -433,7 +433,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         </span>
                         {item.status === 'claimed' && (
                           <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center text-white text-xs font-bold">
-                            成立済
+                            {t.statusClaimed}
                           </div>
                         )}
                         <button
@@ -477,7 +477,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 userPosts.map((post) => (
                   <div key={post.id} className="p-4 rounded-2xl bg-white border border-gray-100 shadow-2xs space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-gray-400">
-                      <span className="font-bold text-gray-700">{post.category === 'tip' ? '💡 育児Tips' : '🎁 お譲りリクエスト'}</span>
+                      <span className="font-bold text-gray-700">
+                        {post.category === 'tip'
+                          ? (locale === 'en' ? '💡 Parenting Tips' : '💡 育児Tips')
+                          : (locale === 'en' ? '🎁 Item Request' : '🎁 お譲りリクエスト')}
+                      </span>
                       <span>{post.createdAt}</span>
                     </div>
                     <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-line">{post.content}</p>

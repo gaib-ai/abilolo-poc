@@ -212,7 +212,7 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
 
           <div className="text-[10px] text-gray-400 font-bold px-2 hidden sm:block whitespace-nowrap shrink-0">
-            {items.length + posts.length} 地点のピン
+            {items.length + posts.length} {t.mapPinsLabel}
           </div>
         </div>
 
@@ -226,7 +226,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 : 'bg-white/90 backdrop-blur-md text-gray-700 hover:bg-white border border-gray-200'
             }`}
           >
-            東京全体
+            {t.mapAllTokyo}
           </button>
           {TOKYO_LOCATIONS.map((loc) => (
             <button
@@ -266,7 +266,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
-                  ¥0 お譲り
+                  {t.cardZeroYen}
                 </span>
                 <span className="text-[10px] text-gray-400 truncate">
                   📍 {activeItem.neighborhood}
@@ -330,14 +330,16 @@ export const MapView: React.FC<MapViewProps> = ({
                 </p>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {activePost.category === 'tip' ? '💡 育児Tips' : '🎁 リクエスト'}
+                {activePost.category === 'tip'
+                  ? (locale === 'en' ? '💡 Parenting Tips' : '💡 育児Tips')
+                  : (locale === 'en' ? '🎁 Request' : '🎁 リクエスト')}
               </span>
             </div>
             <p className="text-xs text-gray-800 line-clamp-2 leading-relaxed">
               {activePost.content}
             </p>
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 text-xs">
-              <span className="text-gray-400 text-[11px]">❤️ {activePost.likes} いいね</span>
+              <span className="text-gray-400 text-[11px]">❤️ {activePost.likes} {t.likesLabel}</span>
               <button
                 onClick={() => onOpenProfile(activePost.userId)}
                 className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 whitespace-nowrap"

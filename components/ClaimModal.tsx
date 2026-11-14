@@ -78,7 +78,7 @@ export const ClaimModal: React.FC<ClaimModalProps> = ({
               <div className="text-gray-400 font-medium">{locale === 'en' ? 'Claimed Item:' : 'お譲り品:'}</div>
               <div className="font-bold text-gray-800">{item.title}</div>
               <div className="text-pink-600 font-semibold pt-1">
-                {locale === 'en' ? 'Estimated COD Shipping: ' : '着払い想定送料: '}{item.estimatedShippingFee || '約1,000円〜'}
+                {locale === 'en' ? 'Estimated COD Shipping: ' : '着払い想定送料: '}{item.estimatedShippingFee || (locale === 'en' ? 'Approx. ¥1,000~' : '約1,000円〜')}
               </div>
             </div>
 

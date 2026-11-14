@@ -24,7 +24,8 @@ import {
 import {
   fetchChatRoomsFromSupabase,
   fetchChatMessagesFromSupabase,
-  insertChatMessageToSupabase
+  insertChatMessageToSupabase,
+  markChatRoomAsReadInSupabase
 } from '@/lib/supabase/chats';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
@@ -421,6 +422,18 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     setIsChatOpen(true);
   };
 
+  const handleSelectRoom = (roomId: string) => {
+    setActiveChatRoomId(roomId);
+    if (roomId) {
+      setChatRooms((prev) =>
+        prev.map((r) => (r.id === roomId && r.unreadCount > 0 ? { ...r, unreadCount: 0 } : r))
+      );
+      if (isSupabaseConfigured()) {
+        markChatRoomAsReadInSupabase(roomId);
+      }
+    }
+  };
+
   // Start chat with user / about item
   const handleStartChat = async (userId: string, userName: string, userAvatar: string, item?: Item) => {
     if (!currentUser) {
@@ -437,13 +450,15 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           id: userId,
           name: userName,
           avatar: userAvatar || DEFAULT_AVATAR_URL,
-          neighborhood: item?.neighborhood || '東京都新宿区'
+          neighborhood: item?.neighborhood || (locale === 'en' ? 'Tokyo Shinjuku' : '東京都新宿区')
         },
         itemId: item?.id,
         itemTitle: item?.title,
         itemImage: item?.images[0],
-        lastMessage: item ? `${item.title} についての問い合わせ` : '新しいメッセージ',
-        lastMessageAt: '今',
+        lastMessage: item
+          ? (locale === 'en' ? `Inquiry regarding ${item.title}` : `${item.title} についての問い合わせ`)
+          : (locale === 'en' ? 'New message' : '新しいメッセージ'),
+        lastMessageAt: locale === 'en' ? 'Now' : '今',
         unreadCount: 0
       };
 
@@ -459,7 +474,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             participant_id: userId,
             participant_name: userName,
             participant_avatar: userAvatar || null,
-            participant_neighborhood: item?.neighborhood || '東京都新宿区',
+            participant_neighborhood: item?.neighborhood || (locale === 'en' ? 'Tokyo Shinjuku' : '東京都新宿区'),
             item_id: item?.id && item.id.includes('-') && item.id.length === 36 ? item.id : null,
             item_title: item?.title || null,
             item_image: item?.images[0] || null,
@@ -467,6 +482,13 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             unread_count: 0
           });
         }
+      }
+    } else if (room.unreadCount > 0) {
+      setChatRooms((prev) =>
+        prev.map((r) => (r.id === room!.id ? { ...r, unreadCount: 0 } : r))
+      );
+      if (isSupabaseConfigured()) {
+        markChatRoomAsReadInSupabase(room.id);
       }
     }
 
@@ -481,7 +503,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       id: tempId,
       roomId,
       senderId: currentUser?.id || 'me',
-      senderName: currentUser?.email?.split('@')[0] || 'あなた',
+      senderName: currentUser?.email?.split('@')[0] || (locale === 'en' ? 'You' : 'あなた'),
       content,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMine: true
@@ -496,7 +518,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     setChatRooms((prev) =>
       prev.map((r) =>
         r.id === roomId
-          ? { ...r, lastMessage: content, lastMessageAt: '今' }
+          ? { ...r, lastMessage: content, lastMessageAt: locale === 'en' ? 'Now' : '今' }
           : r
       )
     );
@@ -507,7 +529,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         roomId,
         content,
         currentUser?.id || 'me',
-        currentUser?.email?.split('@')[0] || 'あなた'
+        currentUser?.email?.split('@')[0] || (locale === 'en' ? 'You' : 'あなた')
       ).then((saved) => {
         if (saved) {
           setChatMessages((prev) => {
@@ -638,7 +660,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const handleAddPostComment = (postId: string, content: string) => {
     const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'] || {
       id: currentUser?.id || 'user-me',
-      displayName: currentUser?.email?.split('@')[0] || '子育てユーザー',
+      displayName: currentUser?.email?.split('@')[0] || (locale === 'en' ? 'Parent User' : '子育てユーザー'),
       avatarUrl: DEFAULT_AVATAR_URL
     };
 
@@ -1050,7 +1072,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           setActiveChatRoomId(null);
         }}
         onSendMessage={handleSendMessage}
-        onSelectRoom={(rid) => setActiveChatRoomId(rid)}
+        onSelectRoom={handleSelectRoom}
         onOpenProfile={handleOpenProfile}
       />
 

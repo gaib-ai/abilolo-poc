@@ -41,6 +41,13 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
     }
   }, [activeRoomId]);
 
+  // Mark room as read when open with active selection
+  useEffect(() => {
+    if (isOpen && selectedRoomId) {
+      onSelectRoom(selectedRoomId);
+    }
+  }, [isOpen, selectedRoomId, onSelectRoom]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedRoomId, messages]);
@@ -117,7 +124,10 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                 return (
                   <button
                     key={room.id}
-                    onClick={() => setSelectedRoomId(room.id)}
+                    onClick={() => {
+                      setSelectedRoomId(room.id);
+                      onSelectRoom(room.id);
+                    }}
                     className={`w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-all ${
                       isSelected
                         ? 'bg-white shadow-sm border border-pink-100 ring-2 ring-pink-500/10'
@@ -146,7 +156,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                        {room.lastMessage || '会話を始めましょう'}
+                        {room.lastMessage || t.chatStartPrompt}
                       </p>
                       {room.itemTitle && (
                         <div className="flex items-center gap-1 text-[10px] text-pink-600 mt-1 truncate">
@@ -227,7 +237,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                     </h5>
                   </div>
                   <span className="text-xs font-black text-pink-600 bg-white px-2 py-0.5 rounded-full border border-pink-200 shadow-xs shrink-0">
-                    ¥0 お譲り
+                    {t.cardZeroYen}
                   </span>
                 </div>
               )}
@@ -236,7 +246,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#faf9fa]">
                 <div className="text-center my-2">
                   <span className="text-[10px] text-gray-400 bg-white px-3 py-1 rounded-full border border-gray-100 shadow-2xs">
-                    🔒 メッセージは安全に保護されています
+                    {t.chatSecureNotice}
                   </span>
                 </div>
 
@@ -285,7 +295,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder={locale === 'en' ? 'Type a friendly message...' : 'メッセージを入力してください...'}
+                  placeholder={t.chatInputPlaceholder}
                   className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
                 />
                 <button
@@ -301,7 +311,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             <div className="hidden md:flex flex-1 items-center justify-center text-center p-8 text-gray-400">
               <div>
                 <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs">チャットを選択するか、出品者にメッセージを送信してください</p>
+                <p className="text-xs">{t.chatSelectPrompt}</p>
               </div>
             </div>
           )}

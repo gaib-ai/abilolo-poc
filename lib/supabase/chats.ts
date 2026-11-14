@@ -124,3 +124,19 @@ export async function insertChatMessageToSupabase(
     return null;
   }
 }
+
+export async function markChatRoomAsReadInSupabase(roomId: string): Promise<boolean> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return false;
+
+  try {
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ unread_count: 0 })
+      .eq('id', roomId);
+    return !error;
+  } catch (err) {
+    console.warn('Failed to mark room as read in Supabase:', err);
+    return false;
+  }
+}
