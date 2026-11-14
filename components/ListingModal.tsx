@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Item, ItemCondition, AiExtractionResult } from '@/lib/types';
-import { CATEGORIES, PREFECTURES, DEMO_PRESET_IMAGES } from '@/lib/data';
+import { CATEGORIES, PREFECTURES, DEMO_PRESET_IMAGES, DEFAULT_AVATAR_URL } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES } from '@/lib/i18n';
 import { compressImage } from '@/lib/image-utils';
 import { uploadItemImageToStorage } from '@/lib/supabase/items';
@@ -165,7 +165,7 @@ export const ListingModal: React.FC<ListingModalProps> = ({
       estimatedShippingFee,
       giverName: giverName || (currentUser?.email?.split('@')[0] || (locale === 'en' ? 'Giver' : '出品者')),
       giverId: currentUser?.id || 'user-sakura',
-      giverAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      giverAvatar: DEFAULT_AVATAR_URL,
       createdAt: new Date().toISOString().split('T')[0],
       status: 'available',
       views: 1,

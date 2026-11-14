@@ -1,4 +1,5 @@
 import { CommunityPost, PostComment } from '../types';
+import { DEFAULT_AVATAR_URL } from '../data';
 import { getSupabaseBrowserClient } from './client';
 
 export async function fetchCommunityPostsFromSupabase(): Promise<CommunityPost[] | null> {
@@ -22,7 +23,7 @@ export async function fetchCommunityPostsFromSupabase(): Promise<CommunityPost[]
       id: row.id,
       userId: row.user_id || 'user-anon',
       authorName: row.author_name,
-      authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      authorAvatar: row.author_avatar || DEFAULT_AVATAR_URL,
       authorNeighborhood: row.author_neighborhood || '東京都新宿区',
       category: row.category as any,
       content: row.content,
@@ -118,7 +119,7 @@ export async function fetchPostCommentsFromSupabase(postId: string): Promise<Pos
       postId: row.post_id,
       authorId: row.author_id || 'user-anon',
       authorName: row.author_name || '子育てユーザー',
-      authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      authorAvatar: row.author_avatar || DEFAULT_AVATAR_URL,
       content: row.content,
       createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString([], { month: 'numeric', day: 'numeric' }) : '今'
     }));
@@ -161,7 +162,7 @@ export async function insertPostCommentToSupabase(
       postId: data.post_id,
       authorId: data.author_id || authorId || 'user-me',
       authorName: data.author_name,
-      authorAvatar: data.author_avatar || authorAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      authorAvatar: data.author_avatar || authorAvatar || DEFAULT_AVATAR_URL,
       content: data.content,
       createdAt: '今'
     };

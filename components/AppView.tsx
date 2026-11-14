@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Item, CommunityPost, UserProfile, ChatRoom, ChatMessage, ItemComment, PostComment } from '@/lib/types';
-import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES, DEMO_ITEM_COMMENTS, DEMO_POST_COMMENTS } from '@/lib/data';
+import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES, DEMO_ITEM_COMMENTS, DEMO_POST_COMMENTS, DEFAULT_AVATAR_URL } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS } from '@/lib/i18n';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/is-configured';
@@ -85,17 +85,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [activeChatRoomId, setActiveChatRoomId] = useState<string | null>(null);
 
   // Auth state
-  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('abilolo_auth_user');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {}
-      }
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authGateReason, setAuthGateReason] = useState<'messages' | 'profile' | null>(null);
   const [pendingGatedAction, setPendingGatedAction] = useState<'messages' | 'profile' | null>(null);
@@ -118,6 +108,10 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       if (saved) {
         try {
           loaded = JSON.parse(saved);
+          if (loaded && (loaded.avatarUrl?.includes('photo-1544005313-94ddf0286df2') || !loaded.avatarUrl)) {
+            loaded.avatarUrl = DEFAULT_AVATAR_URL;
+            localStorage.setItem(`abilolo_profile_${uid}`, JSON.stringify(loaded));
+          }
         } catch (e) {
           console.warn('Failed to parse cached profile:', e);
         }
@@ -130,7 +124,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         id: uid,
         username: cleanUsername,
         displayName: emailPrefix || (locale === 'en' ? 'Parent User' : 'マイアカウント'),
-        avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        avatarUrl: DEFAULT_AVATAR_URL,
         bio: locale === 'en'
           ? 'Sharing outgrown baby & kids supplies with local families in Tokyo!'
           : '都内在住。使わなくなった子ども用品を大切に次のご家族へ0円でお譲りしています✨',
@@ -181,6 +175,17 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
 
   // 1. Initial Load & Realtime Subscriptions
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('abilolo_auth_user');
+        if (saved) {
+          const u = JSON.parse(saved);
+          setCurrentUser(u);
+          syncCurrentUserProfile(u);
+        }
+      } catch (e) {}
+    }
+
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseBrowserClient();
       if (supabase) {
@@ -382,7 +387,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       id: userId,
       username: emailPrefix ? emailPrefix.toLowerCase().replace(/[^a-z0-9_]/g, '_') : 'user_' + userId.slice(-4),
       displayName: emailPrefix || (locale === 'en' ? 'Parent User' : 'マイアカウント'),
-      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      avatarUrl: DEFAULT_AVATAR_URL,
       bio: '使わなくなったベビー服や知育玩具を大切にお譲りしています！お気軽にDMどうぞ✨',
       neighborhood: '東京都新宿区',
       prefecture: '東京都',
@@ -403,6 +408,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       currentProfile.givenCount = myListings.filter((i) => i.status === 'claimed').length;
     }
 
+    setIsChatOpen(false);
     setActiveProfile(currentProfile);
   };
 
@@ -411,6 +417,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       setAuthGateReason('messages');
       return;
     }
+    setActiveProfile(null);
     setIsChatOpen(true);
   };
 
@@ -429,7 +436,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         participant: {
           id: userId,
           name: userName,
-          avatar: userAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+          avatar: userAvatar || DEFAULT_AVATAR_URL,
           neighborhood: item?.neighborhood || '東京都新宿区'
         },
         itemId: item?.id,
@@ -632,7 +639,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
     const userProfile = profiles[currentUser?.id || 'user-me'] || profiles['user-me'] || {
       id: currentUser?.id || 'user-me',
       displayName: currentUser?.email?.split('@')[0] || '子育てユーザー',
-      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80'
+      avatarUrl: DEFAULT_AVATAR_URL
     };
 
     const tempCommentId = `pc-${Date.now()}`;
@@ -1050,16 +1057,34 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       {/* PWA Mobile Navigation & Install Prompt */}
       <BottomNav
         locale={locale}
-        currentTab={currentTab}
+        currentTab={
+          isChatOpen
+            ? 'chat'
+            : (activeProfile && (activeProfile.id === 'user-me' || activeProfile.id === currentUser?.id))
+              ? 'profile'
+              : currentTab
+        }
         unreadChatCount={totalUnreadChats}
         currentUser={currentUser}
-        onSelectTab={setCurrentTab}
+        onSelectTab={(tab) => {
+          if (tab === 'chat') {
+            handleOpenMessages();
+            return;
+          }
+          if (tab === 'profile') {
+            handleOpenProfile('user-me');
+            return;
+          }
+          setIsChatOpen(false);
+          setActiveProfile(null);
+          setCurrentTab(tab);
+        }}
         onOpenListing={() => setIsListingOpen(true)}
         onOpenChat={handleOpenMessages}
         onOpenProfile={() => handleOpenProfile('user-me')}
       />
 
-      <PwaInstallPrompt locale={locale} />
+      {!isChatOpen && !activeProfile && <PwaInstallPrompt locale={locale} />}
 
       {/* Floating Action Feedback Toast */}
       {toastMessage && (

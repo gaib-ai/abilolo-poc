@@ -1,4 +1,5 @@
 import { Item } from '../types';
+import { DEFAULT_AVATAR_URL } from '../data';
 import { getSupabaseBrowserClient } from './client';
 import { isSupabaseConfigured } from './is-configured';
 
@@ -69,7 +70,7 @@ export async function fetchItemsFromSupabase(): Promise<Item[] | null> {
       estimatedShippingFee: row.estimated_shipping_fee,
       giverName: row.giver_name || '出品者',
       giverId: row.giver_id || row.user_id || 'user-sakura',
-      giverAvatar: row.giver_avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+      giverAvatar: row.giver_avatar || DEFAULT_AVATAR_URL,
       createdAt: row.created_at ? row.created_at.split('T')[0] : '',
       status: row.status,
       views: row.views || 0,
