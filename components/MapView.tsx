@@ -107,13 +107,13 @@ export const MapView: React.FC<MapViewProps> = ({
             const itemIcon = L.divIcon({
               className: 'custom-map-marker',
               html: `
-                <div style="background: linear-gradient(135deg, #ec4899, #f43f5e); color: white; padding: 4px 8px; border-radius: 9999px; font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(236,72,153,0.4); border: 2px solid white; cursor: pointer; white-space: nowrap; transform: translate(-50%, -100%);">
+                <div style="background: linear-gradient(135deg, #ec4899, #f43f5e); color: white; width: max-content; padding: 4px 10px; border-radius: 9999px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(236,72,153,0.4); border: 2px solid white; cursor: pointer; white-space: nowrap; transform: translate(-50%, -50%);">
                   <span>🎁</span>
                   <span>¥0</span>
                 </div>
               `,
-              iconSize: [40, 24],
-              iconAnchor: [20, 24]
+              iconSize: [0, 0],
+              iconAnchor: [0, 0]
             });
 
             const marker = L.marker([item.latitude, item.longitude], { icon: itemIcon }).addTo(map);
@@ -134,13 +134,13 @@ export const MapView: React.FC<MapViewProps> = ({
             const postIcon = L.divIcon({
               className: 'custom-map-marker',
               html: `
-                <div style="background: #10b981; color: white; padding: 4px 8px; border-radius: 9999px; font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(16,185,129,0.35); border: 2px solid white; cursor: pointer; white-space: nowrap; transform: translate(-50%, -100%);">
+                <div style="background: #10b981; color: white; width: max-content; padding: 4px 10px; border-radius: 9999px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(16,185,129,0.35); border: 2px solid white; cursor: pointer; white-space: nowrap; transform: translate(-50%, -50%);">
                   <span>💬</span>
                   <span>Tips</span>
                 </div>
               `,
-              iconSize: [45, 24],
-              iconAnchor: [22, 24]
+              iconSize: [0, 0],
+              iconAnchor: [0, 0]
             });
 
             const marker = L.marker([post.latitude, post.longitude], { icon: postIcon }).addTo(map);
