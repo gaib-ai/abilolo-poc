@@ -12,6 +12,7 @@ interface ChatDrawerProps {
   messages: Record<string, ChatMessage[]>;
   locale: Locale;
   currentUserId?: string | null;
+  currentUserEmail?: string | null;
   onClose: () => void;
   onSendMessage: (roomId: string, content: string) => void;
   onSelectRoom: (roomId: string) => void;
@@ -25,6 +26,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   messages,
   locale,
   currentUserId,
+  currentUserEmail,
   onClose,
   onSendMessage,
   onSelectRoom,
@@ -84,7 +86,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-[58px] md:inset-0 z-50 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
+    <div className="fixed inset-0 z-50 flex flex-col md:flex-row md:items-center md:justify-center md:p-4 md:bg-black/60 md:backdrop-blur-sm animate-fadeIn bg-white md:bg-transparent">
       <div 
         className="bg-white w-full h-full md:max-w-2xl md:h-[82vh] md:rounded-3xl md:shadow-2xl md:border md:border-gray-100 flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
@@ -261,10 +263,15 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
                 </div>
 
                 {uniqueMessages.map((msg) => {
+                  const emailPrefix = currentUserEmail ? currentUserEmail.split('@')[0].toLowerCase() : null;
                   const isMine = Boolean(
                     msg.isMine ||
                     msg.senderId === 'me' ||
-                    (currentUserId && msg.senderId === currentUserId)
+                    (currentUserId && msg.senderId === currentUserId) ||
+                    (emailPrefix && (
+                      msg.senderName?.toLowerCase().startsWith(emailPrefix) ||
+                      msg.senderId?.toLowerCase() === emailPrefix
+                    ))
                   );
                   return (
                     <div
@@ -306,7 +313,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
               {/* Message Composer */}
               <form
                 onSubmit={handleSend}
-                className="p-3 bg-white border-t border-gray-100 flex items-center gap-2"
+                className="p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] bg-white border-t border-gray-100 flex items-center gap-2 shrink-0"
               >
                 <input
                   type="text"

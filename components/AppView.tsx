@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Item, CommunityPost, UserProfile, ChatRoom, ChatMessage, ItemComment, PostComment } from '@/lib/types';
 import { CATEGORIES, PREFECTURES, INITIAL_ITEMS, DEMO_POSTS, DEMO_PROFILES, DEMO_CHAT_ROOMS, DEMO_CHAT_MESSAGES, DEMO_ITEM_COMMENTS, DEMO_POST_COMMENTS, DEFAULT_AVATAR_URL } from '@/lib/data';
 import { Locale, DICTIONARY, ENGLISH_CATEGORIES, ENGLISH_PREFECTURES, ENGLISH_ITEMS, ENGLISH_CHAT_ROOMS, ENGLISH_CHAT_MESSAGES } from '@/lib/i18n';
@@ -93,6 +93,11 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authGateReason, setAuthGateReason] = useState<AuthGateTarget | null>(null);
   const [pendingGatedAction, setPendingGatedAction] = useState<AuthGateTarget | null>(null);
+
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   // Sync / create real user profile synchronously in state + async in Supabase
   const syncCurrentUserProfile = (user: { id?: string; email?: string }) => {
@@ -266,6 +271,17 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
             (payload: any) => {
               const row = payload.new;
               if (row && row.room_id) {
+                const currentUid = currentUserRef.current?.id;
+                const currentPrefix = currentUserRef.current?.email ? currentUserRef.current.email.split('@')[0].toLowerCase() : null;
+                const isMineMsg = Boolean(
+                  row.sender_id === 'me' ||
+                  (currentUid && row.sender_id === currentUid) ||
+                  (currentPrefix && (
+                    row.sender_name?.toLowerCase().startsWith(currentPrefix) ||
+                    row.sender_id?.toLowerCase() === currentPrefix
+                  ))
+                );
+
                 const incomingMsg: ChatMessage = {
                   id: row.id,
                   roomId: row.room_id,
@@ -274,7 +290,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
                   senderAvatar: row.sender_avatar,
                   content: row.content,
                   createdAt: new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  isMine: row.sender_id === (currentUser?.id || 'me')
+                  isMine: isMineMsg
                 };
 
                 setChatMessages((prev) => {
@@ -984,6 +1000,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
           comments={postComments}
           locale={locale}
           currentUser={currentUser}
+          profiles={profiles}
           isCreateOpen={isCreatePostOpen}
           onOpenCreate={() => setIsCreatePostOpen(true)}
           onCloseCreate={() => setIsCreatePostOpen(false)}
@@ -1123,6 +1140,7 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
         messages={chatMessages}
         locale={locale}
         currentUserId={currentUser?.id}
+        currentUserEmail={currentUser?.email}
         onClose={() => {
           setIsChatOpen(false);
           setActiveChatRoomId(null);
@@ -1133,35 +1151,35 @@ export const AppView: React.FC<AppViewProps> = ({ locale }) => {
       />
 
       {/* PWA Mobile Navigation & Install Prompt */}
-      <BottomNav
-        locale={locale}
-        currentTab={
-          isChatOpen
-            ? 'chat'
-            : (activeProfile && (activeProfile.id === 'user-me' || activeProfile.id === currentUser?.id))
+      {!isChatOpen && (
+        <BottomNav
+          locale={locale}
+          currentTab={
+            (activeProfile && (activeProfile.id === 'user-me' || activeProfile.id === currentUser?.id))
               ? 'profile'
               : currentTab
-        }
-        unreadChatCount={totalUnreadChats}
-        currentUser={currentUser}
-        onSelectTab={(tab) => {
-          setIsCreatePostOpen(false);
-          if (tab === 'chat') {
-            handleOpenMessages();
-            return;
           }
-          if (tab === 'profile') {
-            handleOpenProfile('user-me');
-            return;
-          }
-          setIsChatOpen(false);
-          setActiveProfile(null);
-          setCurrentTab(tab);
-        }}
-        onOpenListing={() => setIsListingOpen(true)}
-        onOpenChat={handleOpenMessages}
-        onOpenProfile={() => handleOpenProfile('user-me')}
-      />
+          unreadChatCount={totalUnreadChats}
+          currentUser={currentUser}
+          onSelectTab={(tab) => {
+            setIsCreatePostOpen(false);
+            if (tab === 'chat') {
+              handleOpenMessages();
+              return;
+            }
+            if (tab === 'profile') {
+              handleOpenProfile('user-me');
+              return;
+            }
+            setIsChatOpen(false);
+            setActiveProfile(null);
+            setCurrentTab(tab);
+          }}
+          onOpenListing={() => setIsListingOpen(true)}
+          onOpenChat={handleOpenMessages}
+          onOpenProfile={() => handleOpenProfile('user-me')}
+        />
+      )}
 
       {!isChatOpen && !activeProfile && <PwaInstallPrompt locale={locale} />}
 

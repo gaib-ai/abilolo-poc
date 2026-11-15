@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CommunityPost, PostComment } from '@/lib/types';
+import { CommunityPost, PostComment, UserProfile } from '@/lib/types';
 import { Locale, DICTIONARY } from '@/lib/i18n';
 import { TOKYO_LOCATIONS, DEFAULT_AVATAR_URL } from '@/lib/data';
 import { Heart, MessageCircle, MapPin, Plus, Share2, Sparkles, X, Image as ImageIcon, Send, Check } from 'lucide-react';
@@ -11,6 +11,7 @@ interface CommunityFeedProps {
   comments?: Record<string, PostComment[]>;
   locale: Locale;
   currentUser?: { id?: string; email?: string } | null;
+  profiles?: Record<string, UserProfile>;
   isCreateOpen: boolean;
   onOpenCreate: () => void;
   onCloseCreate: () => void;
@@ -28,6 +29,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   comments = {},
   locale,
   currentUser,
+  profiles = {},
   isCreateOpen,
   onOpenCreate,
   onCloseCreate,
@@ -102,10 +104,23 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
     const loc = TOKYO_LOCATIONS.find((l) => l.name === neighborhood) || TOKYO_LOCATIONS[0];
 
+    const currentProfile =
+      (currentUser?.id && profiles[currentUser.id]) ||
+      profiles['user-me'];
+
+    const userDisplayName =
+      currentProfile?.displayName ||
+      currentUser?.email?.split('@')[0] ||
+      (locale === 'en' ? 'Parent User' : 'マイアカウント');
+
+    const userAvatar =
+      currentProfile?.avatarUrl ||
+      DEFAULT_AVATAR_URL;
+
     onAddPost({
-      userId: 'user-me',
-      authorName: locale === 'en' ? 'You (My Account)' : 'あなた (マイアカウント)',
-      authorAvatar: DEFAULT_AVATAR_URL,
+      userId: currentUser?.id || 'user-me',
+      authorName: userDisplayName,
+      authorAvatar: userAvatar,
       authorNeighborhood: locale === 'en' ? neighborhood : `東京都${neighborhood}`,
       content: content.trim(),
       images: imageUrl ? [imageUrl] : [],

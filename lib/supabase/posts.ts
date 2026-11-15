@@ -86,7 +86,7 @@ export async function insertCommunityPostToSupabase(
       latitude: data.latitude ? parseFloat(data.latitude) : 35.6938,
       longitude: data.longitude ? parseFloat(data.longitude) : 139.7034,
       likes: data.likes || 0,
-      isLiked: true,
+      isLiked: false,
       commentCount: 0,
       createdAt: data.created_at ? data.created_at.split('T')[0] : ''
     };
